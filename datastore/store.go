@@ -13,6 +13,7 @@ import (
 const queue string = "https://queue.amazonaws.com/027082628651/myqueue"
 const CODE_TABLE = "code"
 const CLASH_TABLE = "clashes"
+const EVENT_TABLE = "event"
 const CODE_RUNNER = "https://sqs.us-east-1.amazonaws.com/027082628651/coderunner"
 
 type Code struct {
@@ -35,6 +36,7 @@ type DataStore struct {
 	Clashes    *ClashStore
 	Codes      *CodeStore
 	CodeRunner *CodeRunner
+	Events     *EventStore
 }
 
 func New() *DataStore {
@@ -47,11 +49,13 @@ func New() *DataStore {
 	clashes := &ClashStore{db: ddb}
 	codes := &CodeStore{db: ddb}
 	coderunner := &CodeRunner{queue: mysqs}
+	events := &EventStore{db: ddb}
 
 	return &DataStore{
 		Clashes:    clashes,
 		Codes:      codes,
 		CodeRunner: coderunner,
+		Events:     events,
 	}
 }
 
@@ -63,8 +67,56 @@ type CodeStore struct {
 	db *dynamodb.DynamoDB
 }
 
+type EventStore struct {
+	db *dynamodb.DynamoDB
+}
+
 type CodeRunner struct {
 	queue *sqs.SQS
+}
+
+type Event struct {
+	Id      string
+	Subject string
+	Noun    string
+	Verb    string
+}
+
+func (s *EventStore) Insert(event *Event) {
+	item := map[string]*dynamodb.AttributeValue{
+		"id":      S(event.Id),
+		"subject": S(event.Subject),
+		"noun":    S(event.Noun),
+		"verb":    S(event.Verb),
+	}
+
+	_, err := s.db.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(EVENT_TABLE),
+		Item:      item,
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+}
+
+func (s *EventStore) Query(subject string) {
+
+	item := map[string]*dynamodb.AttributeValue{
+		":sub": S(subject),
+	}
+
+	out, err := s.db.Query(&dynamodb.QueryInput{
+		TableName:                 aws.String(EVENT_TABLE),
+		KeyConditionExpression:    aws.String("subject = :sub"),
+		ExpressionAttributeValues: item,
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	fmt.Println(out.GoString())
 }
 
 func (s *CodeStore) Insert(code *Code) {
