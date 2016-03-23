@@ -177,6 +177,19 @@ func main() {
 	sess := session.New(&aws.Config{Region: aws.String("us-east-1")})
 	store = datastore.New()
 
+	/*
+		event := &datastore.Event{
+			Id:      utils.Makeid(),
+			Subject: "othertest",
+			Noun:    "steve",
+			Verb:    "joined",
+		}
+
+		store.Events.Insert(event)
+
+		store.Events.Query("othertest")
+	*/
+
 	res, err := http.Get("http://ifconfig.co")
 
 	if err != nil {
@@ -185,7 +198,7 @@ func main() {
 
 	b, _ := ioutil.ReadAll(res.Body)
 	addr := strings.TrimSpace(string(b))
-	endpoint := "http://" + addr + ":5555/sns"
+	endpoint := "http://" + addr + ":5555/api/sns"
 	fmt.Println(endpoint)
 
 	ps := sns.New(sess)
@@ -276,10 +289,14 @@ func main() {
 
 	r.HandleFunc("/api/code", postCode).Methods("POST")
 
-	r.HandleFunc("/api/rooms", createRoom).Methods("POST")
+	r.HandleFunc("/api/event", createRoom).Methods("POST")
 	r.HandleFunc("/api/rooms", getRooms).Methods("GET")
 
-	r.HandleFunc("/sns", handleSns).Methods("POST")
+	r.HandleFunc("/api/ws", websocketHandler)
+	r.HandleFunc("/api/sns", handleSns).Methods("POST")
 
-	http.ListenAndServe(":5555", r)
+	http.Handle("/api/", r)
+	http.Handle("/", http.FileServer(http.Dir("public")))
+
+	http.ListenAndServe(":5555", nil)
 }

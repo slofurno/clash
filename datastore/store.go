@@ -1,12 +1,14 @@
 package datastore
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
@@ -15,6 +17,7 @@ const CODE_TABLE = "code"
 const CLASH_TABLE = "clashes"
 const EVENT_TABLE = "event"
 const CODE_RUNNER = "https://sqs.us-east-1.amazonaws.com/027082628651/coderunner"
+const EVENT_TOPIC = "arn:aws:sns:us-east-1:027082628651:clash_events"
 
 type Code struct {
 	Id      string `json:"id"`
@@ -39,17 +42,37 @@ type DataStore struct {
 	Events     *EventStore
 }
 
+type EventPusher struct {
+	pusher *sns.SNS
+}
+
+func (s *EventPusher) Publish(event *Event) {
+
+	b, err := json.Marshal(event)
+
+	if err != nil {
+		return
+	}
+
+	s.pusher.Publish(&sns.PublishInput{
+		TopicArn: aws.String(EVENT_TOPIC),
+		Subject:  aws.String(event.Subject),
+		Message:  aws.String(string(b)),
+	})
+}
+
 func New() *DataStore {
 
 	sess := session.New(&aws.Config{Region: aws.String("us-east-1")})
 
 	ddb := dynamodb.New(sess)
 	mysqs := sqs.New(sess)
+	pusher := sns.New(sess)
 
 	clashes := &ClashStore{db: ddb}
 	codes := &CodeStore{db: ddb}
 	coderunner := &CodeRunner{queue: mysqs}
-	events := &EventStore{db: ddb}
+	events := &EventStore{db: ddb, pub: pusher}
 
 	return &DataStore{
 		Clashes:    clashes,
@@ -68,7 +91,8 @@ type CodeStore struct {
 }
 
 type EventStore struct {
-	db *dynamodb.DynamoDB
+	db  *dynamodb.DynamoDB
+	pub *sns.SNS
 }
 
 type CodeRunner struct {
@@ -83,6 +107,11 @@ type Event struct {
 }
 
 func (s *EventStore) Insert(event *Event) {
+	b, err := json.Marshal(event)
+	if err != nil {
+		return
+	}
+
 	item := map[string]*dynamodb.AttributeValue{
 		"id":      S(event.Id),
 		"subject": S(event.Subject),
@@ -90,14 +119,21 @@ func (s *EventStore) Insert(event *Event) {
 		"verb":    S(event.Verb),
 	}
 
-	_, err := s.db.PutItem(&dynamodb.PutItemInput{
+	_, err = s.db.PutItem(&dynamodb.PutItemInput{
 		TableName: aws.String(EVENT_TABLE),
 		Item:      item,
 	})
 
 	if err != nil {
 		fmt.Println(err.Error())
+		return
 	}
+
+	s.pub.Publish(&sns.PublishInput{
+		TopicArn: aws.String(EVENT_TOPIC),
+		Subject:  aws.String(event.Subject),
+		Message:  aws.String(string(b)),
+	})
 }
 
 func (s *EventStore) Query(subject string) {

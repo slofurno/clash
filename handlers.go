@@ -12,6 +12,14 @@ import (
 
 func createRoom(res http.ResponseWriter, req *http.Request) {
 
+	event := &datastore.Event{
+		Id:      utils.Makeid(),
+		Subject: "test",
+		Noun:    "steve",
+		Verb:    "joined",
+	}
+
+	store.Events.Insert(event)
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +80,27 @@ func postCode(res http.ResponseWriter, req *http.Request) {
 }
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
-	_ = ws.Upgrade(w, r)
+	sock := ws.Upgrade(w, r)
+	defer sock.Close()
 
+	handle := obs.Subscribe()
+
+	go func() {
+		obs.AddSubject(handle, "test")
+		for m := range handle.c {
+			sock.WriteS(m)
+		}
+	}()
+
+	for {
+		m, code, err := sock.Read()
+
+		if err != nil || code == ws.Close {
+			break
+		}
+
+		fmt.Println(m)
+	}
+
+	obs.UnSubscribe(handle)
 }
