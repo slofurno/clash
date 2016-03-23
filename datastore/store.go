@@ -14,14 +14,16 @@ import (
 
 const queue string = "https://queue.amazonaws.com/027082628651/myqueue"
 const CODE_TABLE = "code"
-const CLASH_TABLE = "clashes"
+const CLASH_TABLE = "clashe"
 const EVENT_TABLE = "event"
+const RESULTS_TABLE = "results"
 const CODE_RUNNER = "https://sqs.us-east-1.amazonaws.com/027082628651/coderunner"
 const EVENT_TOPIC = "arn:aws:sns:us-east-1:027082628651:clash_events"
 
 type Code struct {
 	Id      string `json:"id"`
 	Code    string `json:"code"`
+	Clash   string `json:"clash"`
 	Runner  string `json:"runner"`
 	Problem string `json:"problem"`
 	User    string `json:"user"`
@@ -29,10 +31,20 @@ type Code struct {
 	Diff    string `json:"diff"`
 	Status  int64  `json:"status"`
 }
+
+type Result struct {
+	Id     string `json:"id"`
+	User   string `json:"user"`
+	Clash  string `json:"clash"`
+	Time   int64  `json:"time"`
+	Status int64  `json:"status"`
+	Code   string `json:"code"`
+}
+
 type Clash struct {
-	Id        string `json:"id"`
-	Time      int64  `json:"time"`
-	Challenge string `json:"challenge"`
+	Id      string `json:"id"`
+	Time    int64  `json:"time"`
+	Problem string `json:"problem"`
 }
 
 type DataStore struct {
@@ -41,6 +53,7 @@ type DataStore struct {
 	Rooms      *RoomStore
 	CodeRunner *CodeRunner
 	Events     *EventStore
+	Results    *ResultStore
 }
 
 type EventPusher struct {
@@ -75,6 +88,7 @@ func New() *DataStore {
 	coderunner := &CodeRunner{queue: mysqs}
 	events := &EventStore{db: ddb, pub: pusher}
 	rooms := &RoomStore{db: ddb}
+	results := &ResultStore{db: ddb}
 
 	return &DataStore{
 		Clashes:    clashes,
@@ -82,6 +96,7 @@ func New() *DataStore {
 		CodeRunner: coderunner,
 		Events:     events,
 		Rooms:      rooms,
+		Results:    results,
 	}
 }
 
@@ -106,6 +121,10 @@ type RoomStore struct {
 	db *dynamodb.DynamoDB
 }
 
+type ResultStore struct {
+	db *dynamodb.DynamoDB
+}
+
 type CodeRunner struct {
 	queue *sqs.SQS
 }
@@ -116,6 +135,63 @@ type Event struct {
 	Noun    string `json:"noun"`
 	Verb    string `json:"verb"`
 	Time    int64  `json:"time"`
+}
+
+func (s *ResultStore) Insert(result *Result) {
+
+	d, err := json.Marshal(result)
+
+	item := map[string]*dynamodb.AttributeValue{
+		"id":    S(result.Id),
+		"clash": S(result.Clash),
+		"json":  S(string(d)),
+	}
+
+	_, err = s.db.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(EVENT_TABLE),
+		Item:      item,
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+}
+
+func (s *ResultStore) Get(clash string) []*Result {
+
+	item := map[string]*dynamodb.AttributeValue{
+		":clash": S(clash),
+	}
+
+	out, _ := s.db.Query(&dynamodb.QueryInput{
+		TableName:                 aws.String(RESULTS_TABLE),
+		KeyConditionExpression:    aws.String("clash = :clash"),
+		ExpressionAttributeValues: item,
+	})
+
+	results := []*Result{}
+
+	for _, item := range out.Items {
+		d := item["json"]
+		if d == nil {
+			continue
+		}
+
+		result := &Result{}
+
+		err := json.Unmarshal([]byte(*d.S), result)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
+		results = append(results, result)
+	}
+
+	return results
+
 }
 
 func (s *EventStore) Insert(event *Event) {
@@ -208,6 +284,7 @@ func (s *CodeStore) Insert(code *Code) {
 		"runner":  S(code.Runner),
 		"diff":    S(code.Diff),
 		"status":  N(code.Status),
+		"clash":   S(code.Clash),
 	}
 
 	_, err := s.db.PutItem(&dynamodb.PutItemInput{
@@ -243,8 +320,9 @@ func (s *CodeStore) Get(id string) *Code {
 	runner := X["runner"]
 	user := X["user"]
 	time := X["time"]
+	clash := X["clash"]
 
-	if code == nil || problem == nil || runner == nil || user == nil || time == nil {
+	if code == nil || problem == nil || runner == nil || user == nil || time == nil || clash == nil {
 		return nil
 	}
 
@@ -252,6 +330,7 @@ func (s *CodeStore) Get(id string) *Code {
 	ret.Problem = *problem.S
 	ret.Runner = *runner.S
 	ret.User = *user.S
+	ret.Clash = *clash.S
 	ret.Id = id
 
 	i, err := strconv.ParseInt(*time.N, 10, 64)
@@ -285,12 +364,40 @@ func (s *RoomStore) Insert(room *Room) {
 	}
 }
 
+func (s *ClashStore) Get(clashid string) *Clash {
+
+	key := map[string]*dynamodb.AttributeValue{
+		"id": S(clashid),
+	}
+
+	res, err := s.db.GetItem(&dynamodb.GetItemInput{
+		ConsistentRead: aws.Bool(true),
+		TableName:      aws.String(CLASH_TABLE),
+		Key:            key,
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	fmt.Println(res.String())
+	d := res.Item["json"]
+	b := []byte(*d.S)
+
+	clash := &Clash{}
+	json.Unmarshal(b, clash)
+
+	return clash
+}
+
 func (s *ClashStore) Insert(clash *Clash) (*dynamodb.PutItemOutput, error) {
 
+	b, _ := json.Marshal(clash)
+
 	items := map[string]*dynamodb.AttributeValue{
-		"id":        S(clash.Id),
-		"challenge": S(clash.Challenge),
-		"time":      N(clash.Time),
+		"id":   S(clash.Id),
+		"json": S(string(b)),
+		"time": N(clash.Time),
 	}
 
 	return s.db.PutItem(&dynamodb.PutItemInput{

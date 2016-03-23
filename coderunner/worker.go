@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/slofurno/front/datastore"
+	"github.com/slofurno/front/utils"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,24 +18,32 @@ func main() {
 
 		m, handle := store.CodeRunner.Receive()
 
-		if handle != nil {
-			code := store.Codes.Get(m)
-
-			if code == nil {
-				continue
-			}
-
-			fmt.Println(code.Code, code.Problem, code.Runner)
-			res, status := diff()
-
-			code.Diff = res
-			code.Status = status
-
-			store.Codes.Insert(code)
-			store.CodeRunner.Delete(handle)
-		} else {
+		if handle == nil {
 			fmt.Println("no messages yet...")
+			continue
 		}
+
+		code := store.Codes.Get(m)
+
+		if code == nil {
+			continue
+		}
+
+		fmt.Println(code.Code, code.Problem, code.Runner)
+		res, status := diff()
+
+		code.Diff = res
+		code.Status = status
+
+		store.Codes.Insert(code)
+
+		store.Events.Insert(&datastore.Event{
+			Id:      utils.Makeid(),
+			Subject: code.Id,
+			Verb:    "ran",
+		})
+
+		store.CodeRunner.Delete(handle)
 	}
 }
 

@@ -138,9 +138,9 @@ func SignSubmission(sr *SubmissionRequest) string {
 
 func NewClash(challenge string) *datastore.Clash {
 	return &datastore.Clash{
-		Id:        utils.Makeid(),
-		Time:      utils.Epoch_ms(),
-		Challenge: challenge,
+		Id:      utils.Makeid(),
+		Time:    utils.Epoch_ms(),
+		Problem: challenge,
 	}
 }
 
@@ -282,11 +282,14 @@ func main() {
 
 	*/
 	r := mux.NewRouter()
-	r.HandleFunc("/api/game", createGame).Methods("POST")
-	r.HandleFunc("/api/code", postCode).Methods("POST")
+	r.HandleFunc("/api/clash", createClash).Methods("POST")
+	r.HandleFunc("/api/clash/{clash}", postCode).Methods("POST")
 	r.HandleFunc("/api/event", createRoom).Methods("POST")
 	r.HandleFunc("/api/events/{subject}", getEvents).Methods("GET")
 	r.HandleFunc("/api/rooms", getRooms).Methods("GET")
+
+	r.HandleFunc("/api/code/{code}", getCode).Methods("GET")
+	r.HandleFunc("/api/clash/{clash}/code/{code}", postResult).Methods("POST")
 
 	r.HandleFunc("/api/ws", websocketHandler)
 	r.HandleFunc("/api/sns", handleSns).Methods("POST")

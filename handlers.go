@@ -24,7 +24,7 @@ func createRoom(res http.ResponseWriter, req *http.Request) {
 	store.Events.Insert(event)
 }
 
-func createGame(w http.ResponseWriter, r *http.Request) {
+func createClash(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 	cr := &clashRequest{}
@@ -49,6 +49,45 @@ func getEvents(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(events)
 }
 
+type CodePost struct {
+	Clash     string
+	User      string
+	Code      string
+	Signature string
+}
+
+func postResult(w http.ResponseWriter, r *http.Request) {
+	//TODO: match auth to submitter of code?
+
+	clashid := mux.Vars(r)["clash"]
+	codeid := mux.Vars(r)["code"]
+
+	code := store.Codes.Get(codeid)
+
+	if code.Clash != clashid {
+		fmt.Println("clash doesn't mtch")
+		return
+	}
+
+	//clash := store.Clashes.Get(clashid)
+
+	//TODO: default code result is success
+	store.Results.Insert(&datastore.Result{
+		Id:     utils.Makeid(),
+		Clash:  clashid,
+		Status: code.Status,
+		Time:   code.Time,
+		User:   code.User,
+	})
+}
+
+func getCode(w http.ResponseWriter, r *http.Request) {
+	code := mux.Vars(r)["code"]
+	x := store.Codes.Get(code)
+	w.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(w).Encode(x)
+}
+
 func getRooms(w http.ResponseWriter, r *http.Request) {
 
 }
@@ -63,6 +102,9 @@ func joinGame(w http.ResponseWriter, r *http.Request) {
 }
 
 func postCode(res http.ResponseWriter, req *http.Request) {
+	clashid := mux.Vars(req)["clash"]
+	clash := store.Clashes.Get(clashid)
+
 	auth := req.Header.Get("Authorization")
 
 	if auth == "" {
@@ -79,6 +121,8 @@ func postCode(res http.ResponseWriter, req *http.Request) {
 	code.Id = id
 	code.User = "esteban"
 	code.Time = utils.Epoch_ms()
+	code.Clash = clashid
+	code.Problem = clash.Problem
 
 	store.Codes.Insert(code)
 	store.CodeRunner.Push(code.Id)
