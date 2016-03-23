@@ -19,6 +19,11 @@ func main() {
 
 		if handle != nil {
 			code := store.Codes.Get(m)
+
+			if code == nil {
+				continue
+			}
+
 			fmt.Println(code.Code, code.Problem, code.Runner)
 			res, status := diff()
 

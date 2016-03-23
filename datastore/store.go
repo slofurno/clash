@@ -221,7 +221,6 @@ func (s *CodeStore) Insert(code *Code) {
 }
 
 func (s *CodeStore) Get(id string) *Code {
-
 	key := map[string]*dynamodb.AttributeValue{
 		"id": S(id),
 	}
@@ -237,9 +236,6 @@ func (s *CodeStore) Get(id string) *Code {
 	}
 
 	X := res.Item
-	fmt.Println(X)
-	fmt.Println(res.String())
-
 	ret := &Code{}
 
 	code := X["code"]
@@ -261,6 +257,8 @@ func (s *CodeStore) Get(id string) *Code {
 	i, err := strconv.ParseInt(*time.N, 10, 64)
 
 	if err != nil {
+		fmt.Println(err.Error())
+	} else {
 		ret.Time = i
 	}
 
@@ -270,14 +268,14 @@ func (s *CodeStore) Get(id string) *Code {
 	if diff != nil && status != nil {
 		i, err := strconv.ParseInt(*status.N, 10, 64)
 		if err != nil {
+			fmt.Println(err.Error())
+		} else {
 			ret.Status = i
 		}
 
-		ret.Diff = *status.S
+		ret.Diff = *status.N
 	}
-
 	return ret
-
 }
 
 func (s *RoomStore) Insert(room *Room) {
@@ -320,8 +318,9 @@ func (s *CodeRunner) Receive() (string, *string) {
 
 	message := messages[0]
 	handle := message.ReceiptHandle
+	body := message.Body
 
-	return *message.Body, handle
+	return *body, handle
 }
 
 func (s *CodeRunner) Delete(handle *string) {
