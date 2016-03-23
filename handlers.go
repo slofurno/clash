@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/slofurno/front/datastore"
 	"github.com/slofurno/front/utils"
 	"github.com/slofurno/ws"
-	"net/http"
 )
 
 func createRoom(res http.ResponseWriter, req *http.Request) {
@@ -17,6 +18,7 @@ func createRoom(res http.ResponseWriter, req *http.Request) {
 		Subject: "test",
 		Noun:    "steve",
 		Verb:    "joined",
+		Time:    utils.Epoch_ms(),
 	}
 
 	store.Events.Insert(event)
@@ -36,7 +38,15 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/javascript")
 	json.NewEncoder(w).Encode(clash)
+}
 
+func getEvents(w http.ResponseWriter, r *http.Request) {
+	subject := mux.Vars(r)["subject"]
+
+	events := store.Events.Query(subject)
+
+	w.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(w).Encode(events)
 }
 
 func getRooms(w http.ResponseWriter, r *http.Request) {
@@ -74,9 +84,12 @@ func postCode(res http.ResponseWriter, req *http.Request) {
 	store.CodeRunner.Push(code.Id)
 
 	res.Write([]byte(id))
-
 	//lookup user via auth token
+}
 
+type Change struct {
+	Type    string `json:"type"`
+	Subject string `json:"subject"`
 }
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -99,8 +112,14 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		fmt.Println(m)
+		change := &Change{}
+		err = json.Unmarshal([]byte(m), change)
+
+		if err == nil {
+			fmt.Println(change)
+		}
 	}
 
+	fmt.Println("ws quit")
 	obs.UnSubscribe(handle)
 }

@@ -38,6 +38,7 @@ type Clash struct {
 type DataStore struct {
 	Clashes    *ClashStore
 	Codes      *CodeStore
+	Rooms      *RoomStore
 	CodeRunner *CodeRunner
 	Events     *EventStore
 }
@@ -73,13 +74,19 @@ func New() *DataStore {
 	codes := &CodeStore{db: ddb}
 	coderunner := &CodeRunner{queue: mysqs}
 	events := &EventStore{db: ddb, pub: pusher}
+	rooms := &RoomStore{db: ddb}
 
 	return &DataStore{
 		Clashes:    clashes,
 		Codes:      codes,
 		CodeRunner: coderunner,
 		Events:     events,
+		Rooms:      rooms,
 	}
+}
+
+type Room struct {
+	Name string
 }
 
 type ClashStore struct {
@@ -95,15 +102,20 @@ type EventStore struct {
 	pub *sns.SNS
 }
 
+type RoomStore struct {
+	db *dynamodb.DynamoDB
+}
+
 type CodeRunner struct {
 	queue *sqs.SQS
 }
 
 type Event struct {
-	Id      string
-	Subject string
-	Noun    string
-	Verb    string
+	Id      string `json:"id"`
+	Subject string `json:"subject"`
+	Noun    string `json:"noun"`
+	Verb    string `json:"verb"`
+	Time    int64  `json:"time"`
 }
 
 func (s *EventStore) Insert(event *Event) {
@@ -117,6 +129,7 @@ func (s *EventStore) Insert(event *Event) {
 		"subject": S(event.Subject),
 		"noun":    S(event.Noun),
 		"verb":    S(event.Verb),
+		"time":    N(event.Time),
 	}
 
 	_, err = s.db.PutItem(&dynamodb.PutItemInput{
@@ -136,7 +149,7 @@ func (s *EventStore) Insert(event *Event) {
 	})
 }
 
-func (s *EventStore) Query(subject string) {
+func (s *EventStore) Query(subject string) []*Event {
 
 	item := map[string]*dynamodb.AttributeValue{
 		":sub": S(subject),
@@ -152,7 +165,34 @@ func (s *EventStore) Query(subject string) {
 		fmt.Println(err.Error())
 	}
 
-	fmt.Println(out.GoString())
+	events := []*Event{}
+
+	for _, item := range out.Items {
+
+		verb := item["verb"]
+		subject := item["subject"]
+		noun := item["noun"]
+		id := item["id"]
+		time := item["time"]
+
+		if verb == nil || subject == nil || noun == nil || id == nil || time == nil {
+			continue
+		}
+
+		i, _ := strconv.ParseInt(*time.N, 10, 64)
+
+		event := &Event{
+			Id:      *id.S,
+			Noun:    *noun.S,
+			Subject: *subject.S,
+			Verb:    *verb.S,
+			Time:    i,
+		}
+
+		events = append(events, event)
+	}
+
+	return events
 }
 
 func (s *CodeStore) Insert(code *Code) {
@@ -238,6 +278,13 @@ func (s *CodeStore) Get(id string) *Code {
 
 	return ret
 
+}
+
+func (s *RoomStore) Insert(room *Room) {
+
+	_ = map[string]*dynamodb.AttributeValue{
+		"id": S(room.Name),
+	}
 }
 
 func (s *ClashStore) Insert(clash *Clash) (*dynamodb.PutItemOutput, error) {

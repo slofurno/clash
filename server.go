@@ -1,26 +1,23 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
-	/*
-		"github.com/aws/aws-sdk-go/service/s3"
-	*/
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
 
-	"crypto/hmac"
-	"crypto/sha256"
 	"github.com/slofurno/front/datastore"
 	"github.com/slofurno/front/utils"
 
+	"github.com/gorilla/mux"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-
 	"github.com/aws/aws-sdk-go/service/sns"
 )
 
@@ -286,10 +283,9 @@ func main() {
 	*/
 	r := mux.NewRouter()
 	r.HandleFunc("/api/game", createGame).Methods("POST")
-
 	r.HandleFunc("/api/code", postCode).Methods("POST")
-
 	r.HandleFunc("/api/event", createRoom).Methods("POST")
+	r.HandleFunc("/api/events/{subject}", getEvents).Methods("GET")
 	r.HandleFunc("/api/rooms", getRooms).Methods("GET")
 
 	r.HandleFunc("/api/ws", websocketHandler)
