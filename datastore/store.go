@@ -3,6 +3,7 @@ package datastore
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/slofurno/front/utils"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -10,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 const queue string = "https://queue.amazonaws.com/027082628651/myqueue"
@@ -18,6 +21,8 @@ const CLASH_TABLE = "clashe"
 const EVENT_TABLE = "event"
 const RESULTS_TABLE = "results"
 const PROBLEMS_TABLE = "problems"
+const ACCOUNTS_TABLE = "accounts"
+const LOGINS_TABLE = "logins"
 const CODE_RUNNER = "https://sqs.us-east-1.amazonaws.com/027082628651/coderunner"
 const EVENT_TOPIC = "arn:aws:sns:us-east-1:027082628651:clash_events"
 
@@ -55,6 +60,39 @@ type Problem struct {
 	Output string `json:"output"`
 }
 
+type Account struct {
+	Id       string `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func NewAccount(email, password string) *Account {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil
+	}
+
+	return &Account{
+		Email:    email,
+		Password: string(hashed),
+		Id:       utils.Makeid(),
+	}
+}
+
+type Login struct {
+	Id      string `json:"id"`
+	Account string `json:"account"`
+	Token   string `json:"token"`
+}
+
+func NewLogin(account *Account) *Login {
+	return &Login{
+		Id:      utils.Makeid(),
+		Token:   utils.Makeid(),
+		Account: account.Id,
+	}
+}
+
 type DataStore struct {
 	Clashes    *ClashStore
 	Codes      *CodeStore
@@ -63,6 +101,8 @@ type DataStore struct {
 	Events     *EventStore
 	Results    *ResultStore
 	Problems   *ProblemStore
+	Accounts   *AccountStore
+	Logins     *LoginStore
 }
 
 type EventPusher struct {
@@ -99,6 +139,8 @@ func New() *DataStore {
 	rooms := &RoomStore{db: ddb}
 	results := &ResultStore{db: ddb}
 	problems := &ProblemStore{db: ddb}
+	accounts := &AccountStore{db: ddb}
+	logins := &LoginStore{db: ddb}
 
 	return &DataStore{
 		Clashes:    clashes,
@@ -108,6 +150,8 @@ func New() *DataStore {
 		Rooms:      rooms,
 		Results:    results,
 		Problems:   problems,
+		Accounts:   accounts,
+		Logins:     logins,
 	}
 }
 
@@ -144,12 +188,59 @@ type ProblemStore struct {
 	db *dynamodb.DynamoDB
 }
 
+type AccountStore struct {
+	db *dynamodb.DynamoDB
+}
+
+type LoginStore struct {
+	db *dynamodb.DynamoDB
+}
+
 type Event struct {
 	Id      string `json:"id"`
 	Subject string `json:"subject"`
 	Noun    string `json:"noun"`
 	Verb    string `json:"verb"`
 	Time    int64  `json:"time"`
+}
+
+func (s *AccountStore) Insert(account *Account) {
+	item := map[string]*dynamodb.AttributeValue{
+		"id":       S(account.Id),
+		"email":    S(account.Email),
+		"password": S(account.Password),
+	}
+
+	s.db.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(ACCOUNTS_TABLE),
+		Item:      item,
+	})
+}
+
+func (s *LoginStore) Insert(login *Login) {
+	item := map[string]*dynamodb.AttributeValue{
+		"id":      S(login.Id),
+		"account": S(login.Account),
+		"token":   S(login.Token),
+	}
+	s.db.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(LOGINS_TABLE),
+		Item:      item,
+	})
+
+}
+
+func (s *LoginStore) Get(token string) {
+	key := map[string]*dynamodb.AttributeValue{
+		"token": S(token),
+	}
+	res, _ := s.db.GetItem(&dynamodb.GetItemInput{
+		ConsistentRead: aws.Bool(true),
+		TableName:      aws.String(LOGINS_TABLE),
+		Key:            key,
+	})
+
+	fmt.Println(res.String())
 }
 
 func (s *ProblemStore) Insert(problem *Problem) {
@@ -178,7 +269,12 @@ func (s *ProblemStore) Get(id string) *Problem {
 		Key:            key,
 	})
 
-	d := *res.Item["json"].S
+	item := res.Item["json"]
+
+	if item == nil {
+		return nil
+	}
+	d := *item.S
 	problem := &Problem{}
 	json.Unmarshal([]byte(d), problem)
 	return problem

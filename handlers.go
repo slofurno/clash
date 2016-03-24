@@ -11,6 +11,26 @@ import (
 	"github.com/slofurno/ws"
 )
 
+func createAccount(res http.ResponseWriter, req *http.Request) {
+	a := &datastore.Account{}
+	err := json.NewDecoder(req.Body).Decode(a)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	account := datastore.NewAccount(a.Email, a.Password)
+
+	if account == nil {
+		return
+	}
+
+	store.Accounts.Insert(account)
+	login := datastore.NewLogin(account)
+
+	res.Write([]byte(login.Token))
+
+}
+
 func getProblems(res http.ResponseWriter, req *http.Request) {
 	problems := store.Problems.Query()
 
@@ -62,7 +82,8 @@ func createClash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clash := NewClash(cr.challenge)
+	clash := NewClash(cr.Problem)
+	fmt.Println(clash)
 	store.Clashes.Insert(clash)
 
 	w.Header().Set("Content-Type", "application/javascript")
@@ -99,15 +120,18 @@ func postResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//clash := store.Clashes.Get(clashid)
+	resultid := utils.Makeid()
 
 	//TODO: default code result is success
 	store.Results.Insert(&datastore.Result{
-		Id:     utils.Makeid(),
+		Id:     resultid,
 		Clash:  clashid,
 		Status: code.Status,
 		Time:   code.Time,
 		User:   code.User,
 	})
+
+	w.Write([]byte(resultid))
 }
 
 func getCode(w http.ResponseWriter, r *http.Request) {
@@ -148,6 +172,7 @@ func postCode(res http.ResponseWriter, req *http.Request) {
 	fmt.Println(code)
 
 	code.Id = id
+	//TODO: use auth token to lookup userid
 	code.User = "esteban"
 	code.Time = utils.Epoch_ms()
 	code.Clash = clashid
@@ -156,7 +181,8 @@ func postCode(res http.ResponseWriter, req *http.Request) {
 	store.Codes.Insert(code)
 	store.CodeRunner.Push(code.Id)
 
-	res.Write([]byte(id))
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(code)
 	//lookup user via auth token
 }
 

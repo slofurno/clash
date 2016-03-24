@@ -26,11 +26,23 @@ func main() {
 		code := store.Codes.Get(m)
 
 		if code == nil {
+			fmt.Println("missing code")
+			store.CodeRunner.Delete(handle)
 			continue
 		}
 
-		fmt.Println(code.Code, code.Problem, code.Runner)
-		res, status := diff()
+		fmt.Println("is this your code?", code.Code)
+		fmt.Println("looking for problem:", code.Problem)
+		problem := store.Problems.Get(code.Problem)
+
+		if problem == nil {
+			fmt.Println("missing problem")
+			store.CodeRunner.Delete(handle)
+			continue
+		}
+		fmt.Println("expected output:", problem.Output)
+		res, status := diff(code.Code, problem.Output)
+		fmt.Println(res)
 
 		code.Diff = res
 		code.Status = status
@@ -59,7 +71,7 @@ for (var i = 0; i < 10; i++) {
 }
 `
 
-func diff() (string, int64) {
+func diff(code, expected string) (string, int64) {
 
 	fmt.Println("diff?")
 	t1, err := ioutil.TempFile("", "d")
@@ -76,11 +88,11 @@ func diff() (string, int64) {
 
 	defer os.Remove(t2.Name())
 
-	if _, err := t1.WriteString(exs); err != nil {
+	if _, err := t1.WriteString(code); err != nil {
 		log.Fatal(err)
 	}
 
-	if _, err := t2.WriteString(exs); err != nil {
+	if _, err := t2.WriteString(expected); err != nil {
 		log.Fatal(err)
 	}
 

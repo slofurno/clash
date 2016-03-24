@@ -102,7 +102,7 @@ type CodeSubmission struct {
 }
 
 type clashRequest struct {
-	challenge string `json:"challenge"`
+	Problem string `json:"problem"`
 }
 
 type Submission struct {
@@ -297,6 +297,8 @@ func main() {
 
 	r.HandleFunc("/api/ws", websocketHandler)
 	r.HandleFunc("/api/sns", handleSns).Methods("POST")
+
+	r.HandleFunc("/api/accounts", createAccount).Methods("POST")
 
 	http.Handle("/api/", r)
 	http.Handle("/", http.FileServer(http.Dir("public")))
