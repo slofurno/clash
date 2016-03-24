@@ -11,6 +11,35 @@ import (
 	"github.com/slofurno/ws"
 )
 
+func getProblems(res http.ResponseWriter, req *http.Request) {
+	problems := store.Problems.Query()
+
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(problems)
+}
+
+func getProblem(res http.ResponseWriter, req *http.Request) {
+	problemid := mux.Vars(req)["problem"]
+	problem := store.Problems.Get(problemid)
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(problem)
+}
+
+func postProblem(res http.ResponseWriter, req *http.Request) {
+
+	problem := &datastore.Problem{}
+	err := json.NewDecoder(req.Body).Decode(problem)
+
+	if err != nil {
+		return
+	}
+
+	problem.Id = utils.Makeid()
+	store.Problems.Insert(problem)
+
+	res.Write([]byte(problem.Id))
+}
+
 func createRoom(res http.ResponseWriter, req *http.Request) {
 
 	event := &datastore.Event{

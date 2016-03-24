@@ -288,6 +288,10 @@ func main() {
 	r.HandleFunc("/api/events/{subject}", getEvents).Methods("GET")
 	r.HandleFunc("/api/rooms", getRooms).Methods("GET")
 
+	r.HandleFunc("/api/problems", postProblem).Methods("POST")
+	r.HandleFunc("/api/problems", getProblems).Methods("GET")
+	r.HandleFunc("/api/problems/{problem}", getProblem).Methods("GET")
+
 	r.HandleFunc("/api/code/{code}", getCode).Methods("GET")
 	r.HandleFunc("/api/clash/{clash}/code/{code}", postResult).Methods("POST")
 

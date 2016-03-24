@@ -17,6 +17,7 @@ const CODE_TABLE = "code"
 const CLASH_TABLE = "clashe"
 const EVENT_TABLE = "event"
 const RESULTS_TABLE = "results"
+const PROBLEMS_TABLE = "problems"
 const CODE_RUNNER = "https://sqs.us-east-1.amazonaws.com/027082628651/coderunner"
 const EVENT_TOPIC = "arn:aws:sns:us-east-1:027082628651:clash_events"
 
@@ -47,6 +48,13 @@ type Clash struct {
 	Problem string `json:"problem"`
 }
 
+type Problem struct {
+	Id     string `json:"id"`
+	Text   string `json:"text"`
+	Input  string `json:"input"`
+	Output string `json:"output"`
+}
+
 type DataStore struct {
 	Clashes    *ClashStore
 	Codes      *CodeStore
@@ -54,6 +62,7 @@ type DataStore struct {
 	CodeRunner *CodeRunner
 	Events     *EventStore
 	Results    *ResultStore
+	Problems   *ProblemStore
 }
 
 type EventPusher struct {
@@ -89,6 +98,7 @@ func New() *DataStore {
 	events := &EventStore{db: ddb, pub: pusher}
 	rooms := &RoomStore{db: ddb}
 	results := &ResultStore{db: ddb}
+	problems := &ProblemStore{db: ddb}
 
 	return &DataStore{
 		Clashes:    clashes,
@@ -97,6 +107,7 @@ func New() *DataStore {
 		Events:     events,
 		Rooms:      rooms,
 		Results:    results,
+		Problems:   problems,
 	}
 }
 
@@ -129,12 +140,75 @@ type CodeRunner struct {
 	queue *sqs.SQS
 }
 
+type ProblemStore struct {
+	db *dynamodb.DynamoDB
+}
+
 type Event struct {
 	Id      string `json:"id"`
 	Subject string `json:"subject"`
 	Noun    string `json:"noun"`
 	Verb    string `json:"verb"`
 	Time    int64  `json:"time"`
+}
+
+func (s *ProblemStore) Insert(problem *Problem) {
+	d, _ := json.Marshal(problem)
+
+	item := map[string]*dynamodb.AttributeValue{
+		"id":   S(problem.Id),
+		"json": S(string(d)),
+	}
+
+	s.db.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(PROBLEMS_TABLE),
+		Item:      item,
+	})
+
+}
+
+func (s *ProblemStore) Get(id string) *Problem {
+	key := map[string]*dynamodb.AttributeValue{
+		"id": S(id),
+	}
+
+	res, _ := s.db.GetItem(&dynamodb.GetItemInput{
+		ConsistentRead: aws.Bool(true),
+		TableName:      aws.String(PROBLEMS_TABLE),
+		Key:            key,
+	})
+
+	d := *res.Item["json"].S
+	problem := &Problem{}
+	json.Unmarshal([]byte(d), problem)
+	return problem
+}
+
+func (s *ProblemStore) Query() []*Problem {
+	results := []*Problem{}
+
+	res, err := s.db.Scan(&dynamodb.ScanInput{
+		TableName: aws.String(PROBLEMS_TABLE),
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return results
+	}
+
+	for _, item := range res.Items {
+		d := *item["json"].S
+		problem := &Problem{}
+		err := json.Unmarshal([]byte(d), problem)
+
+		if err != nil {
+			continue
+		}
+
+		results = append(results, problem)
+	}
+
+	return results
 }
 
 func (s *ResultStore) Insert(result *Result) {
