@@ -5,7 +5,7 @@ import thunk from 'redux-thunk'
 import { render } from 'react-dom'
 
 import rootReducer from './reducers'
-import { getRooms } from './actions'
+import { getRooms, getProblems, dial } from './actions'
 import App from './components/App'
 
 let store = createStore(
@@ -18,6 +18,8 @@ let unsubscribe = store.subscribe(() =>
 )
 
 store.dispatch(getRooms())
+store.dispatch(getProblems())
+dial(store.dispatch)
 
 render(
   <Provider store={store}>

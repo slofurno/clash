@@ -9,8 +9,6 @@ const Room = ({room, joinRoom}) => {
 }
 
 const RoomList = ({rooms, joinRoom}) => {
-  console.log(rooms)
-
   return (
     <ul>
       {rooms.map((x, i) => <Room key = {i} room = {x} joinRoom = {joinRoom}/>)}

@@ -287,12 +287,13 @@ func main() {
 
 	*/
 	r := mux.NewRouter()
-	r.HandleFunc("/api/clash", createClash).Methods("POST")
+	r.HandleFunc("/api/rooms/{room}/clash", createClash).Methods("POST")
 	r.HandleFunc("/api/clash/{clash}", getClash).Methods("GET")
 	r.HandleFunc("/api/clash/{clash}", postCode).Methods("POST")
 
 	r.HandleFunc("/api/rooms", createRoom).Methods("POST")
 	r.HandleFunc("/api/rooms", getRooms).Methods("GET")
+	r.HandleFunc("/api/rooms/{room}", joinRoom).Methods("POST")
 
 	r.HandleFunc("/api/events/{subject}", getEvents).Methods("GET")
 

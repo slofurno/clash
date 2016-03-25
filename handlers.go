@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -113,10 +114,12 @@ func createRoom(res http.ResponseWriter, req *http.Request) {
 	room.Id = utils.Makeid()
 	room.Time = utils.Epoch_ms()
 	store.Rooms.Insert(room)
+
+	json.NewEncoder(res).Encode(room)
 }
 
 func createClash(w http.ResponseWriter, r *http.Request) {
-
+	room := mux.Vars(r)["room"]
 	decoder := json.NewDecoder(r.Body)
 	cr := &clashRequest{}
 
@@ -124,9 +127,24 @@ func createClash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//TODO: maybe make sure you own the room
+	_, err := auth(r)
+
+	if err != nil {
+		return
+	}
+
 	clash := NewClash(cr.Problem)
 	fmt.Println(clash)
 	store.Clashes.Insert(clash)
+
+	store.Events.Insert(&datastore.Event{
+		Id:      utils.Makeid(),
+		Time:    utils.Epoch_ms(),
+		Subject: room,
+		Noun:    clash.Id,
+		Verb:    "STARTED_CLASH",
+	})
 
 	w.Header().Set("Content-Type", "application/javascript")
 	json.NewEncoder(w).Encode(clash)
@@ -206,6 +224,25 @@ func getRooms(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(rooms)
 }
 
+func joinRoom(res http.ResponseWriter, req *http.Request) {
+	room := mux.Vars(req)["room"]
+	login, err := auth(req)
+
+	if err != nil {
+		res.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	store.Events.Insert(&datastore.Event{
+		Id:      utils.Makeid(),
+		Time:    utils.Epoch_ms(),
+		Subject: room,
+		Noun:    login.Account,
+		Verb:    "JOINED_LOBBY",
+	})
+
+}
+
 func joinGame(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	_ = vars["game"]
@@ -213,6 +250,22 @@ func joinGame(w http.ResponseWriter, r *http.Request) {
 	_ = r.Header.Get("Authorization")
 
 	//TODO: lookup user from token
+}
+
+func auth(req *http.Request) (*datastore.Login, error) {
+	auth := req.Header.Get("Authorization")
+
+	if auth == "" {
+		return nil, errors.New("auth")
+	}
+
+	login := store.Logins.Get(auth)
+
+	if login == nil {
+		return nil, errors.New("auth")
+	}
+
+	return login, nil
 }
 
 func postCode(res http.ResponseWriter, req *http.Request) {
