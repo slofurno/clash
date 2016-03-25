@@ -154,7 +154,12 @@ type SnsMessage struct {
 func handleSns(res http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	m := &SnsMessage{}
-	decoder.Decode(m)
+	err := decoder.Decode(m)
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
 	if m.Type == SubscriptionConfirmation {
 		http.Get(m.SubscribeURL)
@@ -283,10 +288,13 @@ func main() {
 	*/
 	r := mux.NewRouter()
 	r.HandleFunc("/api/clash", createClash).Methods("POST")
+	r.HandleFunc("/api/clash/{clash}", getClash).Methods("GET")
 	r.HandleFunc("/api/clash/{clash}", postCode).Methods("POST")
-	r.HandleFunc("/api/event", createRoom).Methods("POST")
-	r.HandleFunc("/api/events/{subject}", getEvents).Methods("GET")
+
+	r.HandleFunc("/api/rooms", createRoom).Methods("POST")
 	r.HandleFunc("/api/rooms", getRooms).Methods("GET")
+
+	r.HandleFunc("/api/events/{subject}", getEvents).Methods("GET")
 
 	r.HandleFunc("/api/problems", postProblem).Methods("POST")
 	r.HandleFunc("/api/problems", getProblems).Methods("GET")
@@ -294,11 +302,13 @@ func main() {
 
 	r.HandleFunc("/api/code/{code}", getCode).Methods("GET")
 	r.HandleFunc("/api/clash/{clash}/code/{code}", postResult).Methods("POST")
+	r.HandleFunc("/api/clash/{clash}/code", getResults).Methods("GET")
 
 	r.HandleFunc("/api/ws", websocketHandler)
 	r.HandleFunc("/api/sns", handleSns).Methods("POST")
 
 	r.HandleFunc("/api/accounts", createAccount).Methods("POST")
+	r.HandleFunc("/api/accounts/login", createLogin).Methods("POST")
 
 	http.Handle("/api/", r)
 	http.Handle("/", http.FileServer(http.Dir("public")))

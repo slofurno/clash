@@ -13,3 +13,4 @@
 *.so
 
 node_modules/
+public/bundle.js

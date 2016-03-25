@@ -23,6 +23,7 @@ const RESULTS_TABLE = "results"
 const PROBLEMS_TABLE = "problems"
 const ACCOUNTS_TABLE = "accounts"
 const LOGINS_TABLE = "logins"
+const ROOMS_TABLE = "rooms"
 const CODE_RUNNER = "https://sqs.us-east-1.amazonaws.com/027082628651/coderunner"
 const EVENT_TOPIC = "arn:aws:sns:us-east-1:027082628651:clash_events"
 
@@ -156,7 +157,9 @@ func New() *DataStore {
 }
 
 type Room struct {
-	Name string
+	Name string `json:"name"`
+	Time int64  `json:"time"`
+	Id   string `json:"id"`
 }
 
 type ClashStore struct {
@@ -217,6 +220,43 @@ func (s *AccountStore) Insert(account *Account) {
 	})
 }
 
+func (s *AccountStore) Get(loginEmail string) []*Account {
+
+	item := map[string]*dynamodb.AttributeValue{
+		":email": S(loginEmail),
+	}
+
+	out, err := s.db.Scan(&dynamodb.ScanInput{
+		TableName:                 aws.String(ACCOUNTS_TABLE),
+		FilterExpression:          aws.String("email = :email"),
+		ExpressionAttributeValues: item,
+	})
+
+	matches := []*Account{}
+	if err != nil {
+		fmt.Println(err.Error())
+		return matches
+	}
+
+	for _, item := range out.Items {
+		email := item["email"]
+		password := item["password"]
+		id := item["id"]
+
+		if email == nil || password == nil || id == nil {
+			continue
+		}
+
+		matches = append(matches, &Account{
+			Id:       *id.S,
+			Email:    *email.S,
+			Password: *password.S,
+		})
+	}
+
+	return matches
+}
+
 func (s *LoginStore) Insert(login *Login) {
 	item := map[string]*dynamodb.AttributeValue{
 		"id":      S(login.Id),
@@ -230,7 +270,7 @@ func (s *LoginStore) Insert(login *Login) {
 
 }
 
-func (s *LoginStore) Get(token string) {
+func (s *LoginStore) Get(token string) *Login {
 	key := map[string]*dynamodb.AttributeValue{
 		"token": S(token),
 	}
@@ -240,7 +280,20 @@ func (s *LoginStore) Get(token string) {
 		Key:            key,
 	})
 
-	fmt.Println(res.String())
+	item := res.Item
+	id := item["id"]
+	account := item["account"]
+	expectedToken := item["token"]
+
+	if expectedToken == nil || id == nil || account == nil {
+		return nil
+	}
+
+	return &Login{
+		Id:      *id.S,
+		Account: *account.S,
+		Token:   token,
+	}
 }
 
 func (s *ProblemStore) Insert(problem *Problem) {
@@ -318,7 +371,7 @@ func (s *ResultStore) Insert(result *Result) {
 	}
 
 	_, err = s.db.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(EVENT_TABLE),
+		TableName: aws.String(RESULTS_TABLE),
 		Item:      item,
 	})
 
@@ -443,8 +496,6 @@ func (s *EventStore) Query(subject string) []*Event {
 
 func (s *CodeStore) Insert(code *Code) {
 
-	fmt.Println(code)
-
 	item := map[string]*dynamodb.AttributeValue{
 		"id":      S(code.Id),
 		"user":    S(code.User),
@@ -528,10 +579,51 @@ func (s *CodeStore) Get(id string) *Code {
 }
 
 func (s *RoomStore) Insert(room *Room) {
-
-	_ = map[string]*dynamodb.AttributeValue{
-		"id": S(room.Name),
+	item := map[string]*dynamodb.AttributeValue{
+		"id":   S(room.Id),
+		"time": N(room.Time),
+		"name": S(room.Name),
 	}
+
+	_, err := s.db.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(ROOMS_TABLE),
+		Item:      item,
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+}
+
+func (s *RoomStore) Get() []*Room {
+	out, err := s.db.Scan(&dynamodb.ScanInput{
+		TableName: aws.String(ROOMS_TABLE),
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+
+	rooms := []*Room{}
+	for _, item := range out.Items {
+		id := item["id"]
+		time := item["time"]
+		name := item["name"]
+
+		if id == nil || time == nil || name == nil {
+			continue
+		}
+
+		i, _ := strconv.ParseInt(*time.N, 10, 64)
+		rooms = append(rooms, &Room{
+			Id:   *id.S,
+			Time: i,
+			Name: *name.S,
+		})
+	}
+
+	return rooms
 }
 
 func (s *ClashStore) Get(clashid string) *Clash {
@@ -550,7 +642,6 @@ func (s *ClashStore) Get(clashid string) *Clash {
 		fmt.Println(err.Error())
 	}
 
-	fmt.Println(res.String())
 	d := res.Item["json"]
 	b := []byte(*d.S)
 

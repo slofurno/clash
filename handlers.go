@@ -9,7 +9,48 @@ import (
 	"github.com/slofurno/front/datastore"
 	"github.com/slofurno/front/utils"
 	"github.com/slofurno/ws"
+
+	"golang.org/x/crypto/bcrypt"
 )
+
+type loginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func createLogin(res http.ResponseWriter, req *http.Request) {
+	login := &loginRequest{}
+	err := json.NewDecoder(req.Body).Decode(login)
+
+	if err != nil {
+		//TODO: return an error code or something
+		return
+	}
+
+	matches := store.Accounts.Get(login.Email)
+	var account *datastore.Account
+
+	for _, match := range matches {
+		err := bcrypt.CompareHashAndPassword([]byte(match.Password), []byte(login.Password))
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		account = match
+		break
+	}
+
+	if account == nil {
+		res.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	newlogin := datastore.NewLogin(account)
+	store.Logins.Insert(newlogin)
+
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(newlogin)
+}
 
 func createAccount(res http.ResponseWriter, req *http.Request) {
 	a := &datastore.Account{}
@@ -26,9 +67,10 @@ func createAccount(res http.ResponseWriter, req *http.Request) {
 
 	store.Accounts.Insert(account)
 	login := datastore.NewLogin(account)
+	store.Logins.Insert(login)
 
-	res.Write([]byte(login.Token))
-
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(login)
 }
 
 func getProblems(res http.ResponseWriter, req *http.Request) {
@@ -61,16 +103,16 @@ func postProblem(res http.ResponseWriter, req *http.Request) {
 }
 
 func createRoom(res http.ResponseWriter, req *http.Request) {
+	room := &datastore.Room{}
+	err := json.NewDecoder(req.Body).Decode(room)
 
-	event := &datastore.Event{
-		Id:      utils.Makeid(),
-		Subject: "test",
-		Noun:    "steve",
-		Verb:    "joined",
-		Time:    utils.Epoch_ms(),
+	if err != nil {
+		return
 	}
 
-	store.Events.Insert(event)
+	room.Id = utils.Makeid()
+	room.Time = utils.Epoch_ms()
+	store.Rooms.Insert(room)
 }
 
 func createClash(w http.ResponseWriter, r *http.Request) {
@@ -90,11 +132,16 @@ func createClash(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(clash)
 }
 
+func getClash(res http.ResponseWriter, req *http.Request) {
+	clashid := mux.Vars(req)["clash"]
+	clash := store.Clashes.Get(clashid)
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(clash)
+}
+
 func getEvents(w http.ResponseWriter, r *http.Request) {
 	subject := mux.Vars(r)["subject"]
-
 	events := store.Events.Query(subject)
-
 	w.Header().Set("Content-Type", "application/javascript")
 	json.NewEncoder(w).Encode(events)
 }
@@ -104,6 +151,13 @@ type CodePost struct {
 	User      string
 	Code      string
 	Signature string
+}
+
+func getResults(res http.ResponseWriter, req *http.Request) {
+	clash := mux.Vars(req)["clash"]
+	results := store.Results.Get(clash)
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(results)
 }
 
 func postResult(w http.ResponseWriter, r *http.Request) {
@@ -129,6 +183,7 @@ func postResult(w http.ResponseWriter, r *http.Request) {
 		Status: code.Status,
 		Time:   code.Time,
 		User:   code.User,
+		Code:   code.Id,
 	})
 
 	w.Write([]byte(resultid))
@@ -141,8 +196,14 @@ func getCode(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(x)
 }
 
-func getRooms(w http.ResponseWriter, r *http.Request) {
+func getRooms(res http.ResponseWriter, req *http.Request) {
+	rooms := store.Rooms.Get()
 
+	if rooms == nil {
+		return
+	}
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(rooms)
 }
 
 func joinGame(w http.ResponseWriter, r *http.Request) {
@@ -165,15 +226,15 @@ func postCode(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	login := store.Logins.Get(auth)
+	fmt.Println("authed as:", login)
+
 	id := utils.Makeid()
 	code := &datastore.Code{}
 	json.NewDecoder(req.Body).Decode(code)
 
-	fmt.Println(code)
-
 	code.Id = id
-	//TODO: use auth token to lookup userid
-	code.User = "esteban"
+	code.User = login.Account
 	code.Time = utils.Epoch_ms()
 	code.Clash = clashid
 	code.Problem = clash.Problem
@@ -183,7 +244,6 @@ func postCode(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/javascript")
 	json.NewEncoder(res).Encode(code)
-	//lookup user via auth token
 }
 
 type Change struct {
@@ -206,6 +266,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		m, code, err := sock.Read()
+		fmt.Println(m)
 
 		if err != nil || code == ws.Close {
 			break
@@ -214,8 +275,17 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 		change := &Change{}
 		err = json.Unmarshal([]byte(m), change)
 
-		if err == nil {
-			fmt.Println(change)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
+		fmt.Println(change)
+		switch change.Type {
+		case "SUB":
+			obs.AddSubject(handle, change.Subject)
+		case "UNSUB":
+			obs.RemoveSubject(handle, change.Subject)
 		}
 	}
 

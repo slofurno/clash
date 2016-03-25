@@ -5,45 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <body>
   <div id="root"></div>
-  <script src="request.js"></script>
-  <script>
-
-  var host = location.origin.replace(/^http/, "ws");
-  var sock = new WebSocket(host + "/api/ws")    
-  var seen = {};
-  var items = [];
-
-  sock.onmessage = function(e) {
-    var d = JSON.parse(e.data);
-    seen[d.id] = true;
-    items = items.concat([d]);
-    console.log(items);
-  };
-
-
-  function setTopic (topic) {
-
-    items = [];
-    seen = {};
-    sock.send(JSON.stringify({
-      subject: topic 
-    })) 
-
-    request({
-      url:`/api/events/${topic}`,
-      method: "GET"
-    })
-    .then(res => {
-      var xs = JSON.parse(res);
-      xs.forEach(x => {
-        if (!seen[x.id]) {
-          items = items.concat([x]);
-        }
-      })
-
-      console.log(items);
-    })
-  }
-  </script>
+  <script src="bundle.js"></script>
 </body>
 </html>
