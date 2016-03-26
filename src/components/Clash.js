@@ -19,7 +19,7 @@ const Result = ({result, postResult}) => {
   )
 }
 
-const Clash = ({setInput, clash, postCode, results, postResult}) => {
+const Clash = ({users, setInput, clash, postCode, results, postResult}) => {
   let { text, input } = clash.problem || {}
   let { value } = clash
   let onSubmit = (e) => postCode(clash.id, {code:value, runner:"js"})
@@ -35,10 +35,8 @@ const Clash = ({setInput, clash, postCode, results, postResult}) => {
 
   return (
 		<div style = {{
-      width: "800px",
-      height: "400px",
-      padding: "6px",
-      backgroundColor: "silver",
+      width: "100%",
+      height: "100%",
     }}>
       <div style = {style}>
         <p>{ text }</p>

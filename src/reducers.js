@@ -131,6 +131,16 @@ function clashes (state = {}, action) {
   }
 }
 
+function slide (state = "", action) {
+  console.log(action)
+  switch (action.type) {
+  case "SET_SLIDE":
+    return action.slide
+  default:
+    return state
+  }
+}
+
 
 const rootReducer = combineReducers({
   users,
@@ -143,7 +153,8 @@ const rootReducer = combineReducers({
   token,
   results,
   clashResults,
-  clashes
+  clashes,
+  slide
 })
 
 export default rootReducer

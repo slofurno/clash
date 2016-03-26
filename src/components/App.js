@@ -9,7 +9,8 @@ import {
   setInput,
   joinRoom,
   postCode,
-  postResult
+  postResult,
+  setSlide
 } from '../actions'
 
 
@@ -26,6 +27,9 @@ const mapDispatchToProps = (dispatch) => {
     },
     postResult: (clash, code) => {
       dispatch(postResult(clash, code))
+    },
+    setSlide: (slide) => {
+      dispatch(setSlide(slide))
     }
     /*onTodoClick: (id) => {
       dispatch(toggleTodo(id))
@@ -42,21 +46,25 @@ class App extends Component {
       users,
       results,
       clashResults,
+      slide,
       setInput,
       currentClash,
       joinRoom,
       postCode,
-      postResult
+      postResult,
+      setSlide
 
     } = this.props
 
     let visibleResults = clashResults.filter(x => x.subject === currentClash.id)
     let visibleClashResults = clashResults.filter(x => x.clash === currentClash.id)
 
-    return (
-      <div>
-        <div style = {{display: "inline-block"}}>
-          <Lobby room = {currentRoom} events = {events} users = {users} />
+    let visibleSlide = (function(){
+      switch(slide) {
+      case "LOBBY":
+        return (<Lobby room = {currentRoom} events = {events} users = {users} />)
+      case "CLASH":
+        return (
           <Clash 
             setInput = {setInput} 
             clash = {currentClash}
@@ -66,9 +74,36 @@ class App extends Component {
             visibleResults = {visibleResults}
             users = {users}
           />
+        )
+      case "RESULTS":
+        return (
           <ClashResults
             results = {visibleClashResults}             
           />
+        )
+      default:
+        return (<div></div>)
+      }
+    }())
+
+    return (
+      <div>
+        <div style = {{display: "inline-block"}}>
+          <div style = {{
+            width: "800px",
+            height: "400px",
+            padding: "6px",
+            backgroundColor: "silver",
+          }}>
+            {visibleSlide}
+          </div>
+          <div>
+            <ul>
+              <li className="tab" onClick = {e => setSlide("LOBBY")}>Lobby</li>
+              <li className="tab" onClick = {e => setSlide("CLASH")}>Clash</li>
+              <li className="tab" onClick = {e => setSlide("RESULTS")}>Results</li>
+            </ul>
+          </div>
         </div>
         <div style = {{
           display: "inline-block",

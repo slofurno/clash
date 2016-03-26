@@ -48,6 +48,13 @@ function handleEvent (d, dispatch) {
   }
 }
 
+export function setSlide (slide) {
+  return {
+    type: "SET_SLIDE",
+    slide
+  }
+}
+
 function addClashResult (result) {
   return {
     type: ADD_CLASH_RESULT,
