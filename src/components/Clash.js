@@ -4,15 +4,15 @@ const Result = ({result}) => {
 
   const {code, output, diff, status} = result
 
-  let color = status === "0" ? "green" : "red"
+  let color = status === 0 ? "green" : "red"
 
   return (
     <div>
-      <div>{code}</div>
-      <div>{output}</div>
-      <div style = {{
+      <pre>{code}</pre>
+      <pre>{output}</pre>
+      <pre style = {{
         backgroundColor: color, 
-      }}>{diff}</div>
+      }}>{diff}</pre>
     </div> 
   )
 }
@@ -24,24 +24,33 @@ const Clash = ({setInput, clash, postCode, results}) => {
   let { value } = clash
   let onSubmit = (e) => postCode(clash.id, {code:value, runner:"js"})
 
+  let style = {
+    display: "inline-block",
+    width: "50%",
+    padding: "5px",
+    verticalAlign: "top"
+  }
+
   return (
 		<div style = {{
-      width: "500px",
+      width: "800px",
       height: "400px",
-      padding: "20px",
+      padding: "6px",
       backgroundColor: "silver",
     }}>
-      <p>{ text }</p>
-      <pre>{ input }</pre>
-			<textarea 
-				rows="8"
-				onChange = {setInput}
-        value = {value}
-			></textarea>
-      <input type="button" value="submit" onClick = {onSubmit} />
-   
-      { results.map((x, i) => <Result key = {i} result = {x}/>) }
-      
+      <div style = {style}>
+        <p>{ text }</p>
+        <pre>{ input }</pre>
+        <textarea 
+          rows="16"
+          onChange = {setInput}
+          value = {value}
+        ></textarea>
+        <input type="button" value="submit" onClick = {onSubmit} />
+      </div>
+      <div style = {style}>
+        { results.slice().reverse().map((x, i) => <Result key = {i} result = {x}/>) }
+      </div>
 
 		</div>
   )

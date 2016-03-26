@@ -129,7 +129,7 @@ func diff(code, expected string) (string, int64) {
 		log.Fatal(err)
 	}
 
-	diff := exec.Command("diff", t1.Name(), t2.Name())
+	diff := exec.Command("diff", "-w", t1.Name(), t2.Name())
 	//diff := exec.Command("diff", "<(node "+t1.Name()+")", "<(node "+t2.Name()+")")
 
 	var cout []byte

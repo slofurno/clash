@@ -291,6 +291,7 @@ func postCode(res http.ResponseWriter, req *http.Request) {
 	code.Time = utils.Epoch_ms()
 	code.Clash = clashid
 	code.Problem = clash.Problem
+	code.Status = -1
 
 	store.Codes.Insert(code)
 	store.CodeRunner.Push(code.Id)
