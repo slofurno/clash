@@ -228,8 +228,10 @@ export function joinRoom(room) {
     })
     .then(parse)
     .then(xs => {
-      xs.map(x => handleEvent(x, dispatch))
+      //this is kind of fd
+      //joinroom clears clashes + then we add our rsults
       dispatch(joinRoomSuccess(room))
+      xs.map(x => handleEvent(x, dispatch))
     })
     .catch(error)
   }

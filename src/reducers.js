@@ -124,6 +124,8 @@ function clashResults (state = [], action) {
 
 function clashes (state = [], action) {
   switch (action.type) {
+  case JOINED_ROOM:
+    return []
   case "ADD_CLASH":
     return state.concat([action.clash])
   default:
@@ -131,7 +133,7 @@ function clashes (state = [], action) {
   }
 }
 
-function slide (state = "", action) {
+function slide (state = "LOBBY", action) {
   switch (action.type) {
   case "SET_SLIDE":
     return action.slide

@@ -32,8 +32,8 @@ const mapDispatchToProps = (dispatch) => {
     setSlide: (slide) => {
       dispatch(setSlide(slide))
     },
-    setProblem: (problem) => {
-      dispatch(setProblem(problem))
+    setProblem: (problem, clash) => {
+      dispatch(setProblem(problem, clash))
     },
     /*onTodoClick: (id) => {
       dispatch(toggleTodo(id))
