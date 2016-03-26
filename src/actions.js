@@ -7,6 +7,8 @@ export const ADD_EVENTS = 'ADD_EVENTS'
 export const ADD_PROBLEMS = 'ADD_PROBLEMS'
 export const SHOW_CLASH = 'SHOW_CLASH'
 export const JOIN_CLASH ='JOIN_CLASH'
+export const ADD_RESULT = 'ADD_RESULT'
+export const SET_TOKEN = 'SET_TOKEN'
 
 let host = location.host
 let baseurl = `http://${host}/api`
@@ -23,12 +25,14 @@ export function dial (dispatch) {
     switch (d.verb) {
     case "JOINED_LOBBY":
       dispatch(addEvents([d]))
+      break;
     case "STARTED_CLASH":
       dispatch(getClash(d.noun))
+      break;
     case "ran":
       dispatch(getResult(d.subject))
+      break;
     default:
-      console.log(d)
     }
   }
 }
@@ -38,6 +42,13 @@ export function setInput (e) {
   return {
     type: SET_INPUT,
     value: e.target.value
+  }
+}
+
+export function setToken (token) {
+  return {
+    type: SET_TOKEN,
+    token
   }
 }
 
@@ -96,6 +107,14 @@ function waitForResult (id) {
   subscribe(id) 
 }
 
+function addResult (result) {
+  console.log("???", result)
+  return {
+    type: ADD_RESULT,
+    result
+  }
+}
+
 function getResult (id) {
   return function (dispatch) {
     return request({
@@ -103,7 +122,7 @@ function getResult (id) {
       url: `/api/code/${id}`
     })
     .then(parse)
-    .then(x => console.log(x))
+    .then(x => dispatch(addResult(x)))
     .catch(error)
   }
 }
@@ -164,11 +183,12 @@ function getProblem (problem) {
 
 export function postCode (clash, code) {
   return function (dispatch, getState) {
+    let token = getState().token || ""
     return request({
       method: "POST",
       url: `/api/clash/${clash}`,
       body: JSON.stringify(code),
-      headers: {Authorization:"9fd80e71-c5a7-427d-a80b-1ccee4ed5c9e"}
+      headers: {Authorization:token}
     })
     .then(parse)
     .then(x => {

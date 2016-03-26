@@ -2,7 +2,7 @@ import React, { Component, PropTypes } from 'react'
 
 const Room = ({room, joinRoom}) => {
   return (
-    <li onClick = {(e) => joinRoom(room)}>
+    <li className = "room" onClick = {(e) => joinRoom(room)}>
       {room.name}
     </li>
   ) 

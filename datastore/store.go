@@ -37,6 +37,7 @@ type Code struct {
 	Time    int64  `json:"time"`
 	Diff    string `json:"diff"`
 	Status  int64  `json:"status"`
+	Output  string `json:"output"`
 }
 
 type Result struct {
@@ -506,6 +507,7 @@ func (s *CodeStore) Insert(code *Code) {
 		"diff":    S(code.Diff),
 		"status":  N(code.Status),
 		"clash":   S(code.Clash),
+		"output":  S(code.Output),
 	}
 
 	_, err := s.db.PutItem(&dynamodb.PutItemInput{
@@ -564,6 +566,7 @@ func (s *CodeStore) Get(id string) *Code {
 
 	diff := X["diff"]
 	status := X["status"]
+	output := X["output"]
 
 	if diff != nil && status != nil {
 		i, err := strconv.ParseInt(*status.N, 10, 64)
@@ -573,7 +576,11 @@ func (s *CodeStore) Get(id string) *Code {
 			ret.Status = i
 		}
 
-		ret.Diff = *status.N
+		ret.Diff = *diff.S
+	}
+
+	if output != nil {
+		ret.Output = *output.S
 	}
 	return ret
 }

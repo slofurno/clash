@@ -6,11 +6,22 @@ import {
   ADD_EVENTS,
   ADD_PROBLEMS,
   SHOW_CLASH,
-  JOIN_CLASH
+  JOIN_CLASH,
+  SET_TOKEN,
+  ADD_RESULT
 } from './actions'
 
 function user (state = {}, action) {
   switch (action.type) {
+  default:
+    return state
+  }
+}
+
+function token (state = null, action) {
+  switch (action.type) {
+  case SET_TOKEN:
+    return action.token
   default:
     return state
   }
@@ -25,7 +36,6 @@ const initialClash = {
 function currentClash (state = {}, action) {
   switch (action.type) {
   case JOIN_CLASH:
-    console.log("join", action)
     return Object.assign({}, state, {id: action.id})
   case SHOW_CLASH:
     return Object.assign({}, state, {value: state.value, problem: action.problem})
@@ -85,6 +95,14 @@ function problems (state = [], action) {
   }
 }
 
+function results (state = [], action) {
+  switch (action.type) {
+  case ADD_RESULT:
+    return state.concat([action.result])
+  default:
+    return state
+  }
+}
 
 
 const rootReducer = combineReducers({
@@ -94,7 +112,9 @@ const rootReducer = combineReducers({
   subscriptions,
   currentRoom,
   events,
-  problems
+  problems,
+  token,
+  results
 })
 
 export default rootReducer

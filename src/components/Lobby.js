@@ -13,15 +13,13 @@ const Lobby = ({room, events}) => {
     }
   })
 
-  console.log(here)
-
   return (
-    <div style = {{
-      backgroundColor: "lightslategray"
+    <div className = "card" style = {{
+      width: "100%"
     }}>
       <h2> {room.name} </h2>
       <ul>
-        { Object.keys(here).map((x, i) => <li key = {i}> {x} </li>) }
+        { Object.keys(here).map((x, i) => <div className = "user" key = {i}>{x}</div>) }
       </ul> 
     </div>
   ) 

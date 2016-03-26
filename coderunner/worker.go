@@ -31,8 +31,6 @@ func main() {
 			continue
 		}
 
-		fmt.Println("is this your code?", code.Code)
-		fmt.Println("looking for problem:", code.Problem)
 		problem := store.Problems.Get(code.Problem)
 
 		if problem == nil {
@@ -41,8 +39,14 @@ func main() {
 			continue
 		}
 		fmt.Println("expected output:", problem.Output)
-		res, status := diff(code.Code, problem.Output)
-		fmt.Println(res)
+
+		//FIXME
+		run(code)
+
+		fmt.Println("???")
+		fmt.Println(code.Output)
+
+		res, status := diff(code.Output, problem.Output)
 
 		code.Diff = res
 		code.Status = status
@@ -71,6 +75,35 @@ for (var i = 0; i < 10; i++) {
 }
 `
 
+var runners = map[string]string{
+	"js": "node",
+}
+
+func run(code *datastore.Code) {
+	t, err := ioutil.TempFile("", "d")
+
+	defer os.Remove(t.Name())
+	t.WriteString(code.Code)
+
+	var cmd string
+	var ok bool
+
+	if cmd, ok = runners[code.Runner]; !ok {
+		fmt.Println("invalid runner")
+		return
+	}
+
+	p := exec.Command(cmd, t.Name())
+	cout, err := p.CombinedOutput()
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	code.Output = string(cout)
+	t.Close()
+}
+
 func diff(code, expected string) (string, int64) {
 
 	fmt.Println("diff?")
@@ -96,7 +129,7 @@ func diff(code, expected string) (string, int64) {
 		log.Fatal(err)
 	}
 
-	diff := exec.Command("./noderunner.sh", t1.Name(), t2.Name())
+	diff := exec.Command("diff", t1.Name(), t2.Name())
 	//diff := exec.Command("diff", "<(node "+t1.Name()+")", "<(node "+t2.Name()+")")
 
 	var cout []byte

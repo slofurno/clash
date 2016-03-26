@@ -34,6 +34,7 @@ class App extends Component {
       rooms,
       currentRoom,
       events,
+      results,
       setInput,
       currentClash,
       joinRoom,
@@ -43,13 +44,22 @@ class App extends Component {
 
     return (
       <div>
-        <RoomList rooms = {rooms} joinRoom = {joinRoom}/>
-        <Lobby room = {currentRoom} events = {events}/>
-        <Clash 
-          setInput = {setInput} 
-          clash = {currentClash}
-          postCode = {postCode}
-        />
+        <div style = {{display: "inline-block"}}>
+          <Lobby room = {currentRoom} events = {events}/>
+          <Clash 
+            setInput = {setInput} 
+            clash = {currentClash}
+            postCode = {postCode}
+            results = {results}
+          />
+        </div>
+        <div style = {{
+          display: "inline-block",
+          verticalAlign: "top",
+          width: "150px"
+        }}>
+          <RoomList rooms = {rooms} joinRoom = {joinRoom}/>
+        </div>
       </div>
     )
   }

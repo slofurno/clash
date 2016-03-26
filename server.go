@@ -6,13 +6,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/slofurno/front/datastore"
+	"github.com/slofurno/front/utils"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
-
-	"github.com/slofurno/front/datastore"
-	"github.com/slofurno/front/utils"
 
 	"github.com/gorilla/mux"
 
@@ -23,7 +22,6 @@ import (
 
 var SubscriptionConfirmation = "SubscriptionConfirmation"
 var Notification = "Notification"
-
 var store *datastore.DataStore
 var obs *SnsObserver
 
@@ -280,11 +278,9 @@ func main() {
 			TableName: "clash",
 
 		})
-
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-
 	*/
 	r := mux.NewRouter()
 	r.HandleFunc("/api/rooms/{room}/clash", createClash).Methods("POST")
