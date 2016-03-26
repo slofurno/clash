@@ -9,11 +9,14 @@ import {
   JOIN_CLASH,
   SET_TOKEN,
   ADD_RESULT,
+  ADD_USER,
   ADD_CLASH_RESULT
 } from './actions'
 
-function user (state = {}, action) {
+function users (state = {}, action) {
   switch (action.type) {
+  case ADD_USER:
+    return Object.assign({}, state, action.user)
   default:
     return state
   }
@@ -116,7 +119,7 @@ function clashResults (state = [], action) {
 
 
 const rootReducer = combineReducers({
-  user,
+  users,
   currentClash,
   rooms,
   subscriptions,

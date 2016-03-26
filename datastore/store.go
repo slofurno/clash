@@ -476,6 +476,7 @@ func (s *ResultStore) Get(clash string) []*Result {
 func (s *EventStore) Insert(event *Event) {
 	b, err := json.Marshal(event)
 	if err != nil {
+		fmt.Println(err.Error())
 		return
 	}
 

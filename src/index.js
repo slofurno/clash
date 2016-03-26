@@ -9,7 +9,8 @@ import {
   getRooms,
   getProblems,
   dial,
-  setToken
+  setToken,
+  createAccount
 } from './actions'
 import App from './components/App'
 
@@ -26,8 +27,12 @@ store.dispatch(getRooms())
 store.dispatch(getProblems())
 dial(store.dispatch)
 
-//let token = localStorage.getItem("token")
-store.dispatch(setToken("9fd80e71-c5a7-427d-a80b-1ccee4ed5c9e"))
+let token = localStorage.getItem("Clash.token")
+if (!token) {
+  store.dispatch(createAccount({email:"asdf", password:"asdf"}))
+} else {
+  store.dispatch(setToken(token))
+}
 
 render(
   <Provider store={store}>

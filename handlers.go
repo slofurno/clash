@@ -276,6 +276,8 @@ func joinRoom(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	events := store.Events.Query(room)
+
 	store.Events.Insert(&datastore.Event{
 		Id:      utils.Makeid(),
 		Time:    utils.Epoch_ms(),
@@ -284,6 +286,8 @@ func joinRoom(res http.ResponseWriter, req *http.Request) {
 		Verb:    "JOINED_LOBBY",
 	})
 
+	res.Header().Set("Content-Type", "application/javascript")
+	json.NewEncoder(res).Encode(events)
 }
 
 func joinGame(w http.ResponseWriter, r *http.Request) {

@@ -8,6 +8,7 @@ export const ADD_PROBLEMS = 'ADD_PROBLEMS'
 export const SHOW_CLASH = 'SHOW_CLASH'
 export const JOIN_CLASH ='JOIN_CLASH'
 export const ADD_RESULT = 'ADD_RESULT'
+export const ADD_USER = 'ADD_USER'
 export const ADD_CLASH_RESULT = 'ADD_CLASH_RESULT'
 export const SET_TOKEN = 'SET_TOKEN'
 
@@ -125,6 +126,32 @@ function addResult (result) {
   }
 }
 
+function setUser (user) {
+  return {
+    type: ADD_USER,
+    user
+  }
+}
+
+export function getUser (id) {
+  return function (dispatch, getState) {
+    if (getState().users[id]) {
+      return
+    }
+    return request({
+      method: "GET",
+      url: `/api/accounts/${id}` 
+    })
+    .then(parse)
+    .then(x => {
+      let m = {}
+      m[id] = x
+      dispatch(setUser(m))
+    })
+    .catch(error)    
+  }
+}
+
 export function postResult (clash, code) {
   return function (dispatch, getState) {
     let token = getState().token || ""
@@ -150,17 +177,22 @@ function getResult (id) {
       url: `/api/code/${id}`
     })
     .then(parse)
-    .then(x => dispatch(addResult(x)))
+    .then(x => {
+      dispatch(addResult(x))
+      dispatch(getUser(x.user))
+    })
     .catch(error)
   }
 }
 
 export function joinRoom(room) {
-  return function (dispatch) {
+  return function (dispatch, getState) {
+    const token = getState().token
     subscribe(room.id)  
     return request({
-      method: "GET",
-      url: `/api/events/${room.id}`
+      method: "POST",
+      url: `/api/rooms/${room.id}`,
+      headers: {Authorization:token}
     })
     .then(parse)
     .then(x => {
@@ -175,7 +207,7 @@ export function getRooms() {
   return function (dispatch) {
     return request({
       method: "GET",
-      url: `${baseurl}/rooms`
+      url: `/api/rooms`
     })
     .then(parse)
     .then(x => dispatch(getRoomsSuccess(x)))
@@ -256,6 +288,22 @@ export function getProblems () {
     })
     .then(parse)
     .then(x => dispatch(getProblemSuccess(x)))
+    .catch(error)
+  }
+}
+
+export function createAccount (account) {
+  return function (dispatch) {
+    return request({
+      method: "POST",
+      url: "/api/accounts",
+      body: JSON.stringify(account)
+    })
+    .then(parse)
+    .then(x => {
+      localStorage.setItem("Clash.token", x.token)
+      dispatch(setToken(x.token))
+    }) 
     .catch(error)
   }
 }
