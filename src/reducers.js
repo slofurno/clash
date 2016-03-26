@@ -90,10 +90,13 @@ function events (state = [], action) {
   }
 } 
 
-function problems (state = [], action) {
+function problems (state = {}, action) {
   switch (action.type) {
   case ADD_PROBLEMS:
-    return state.concat(action.problems)
+    let p = {}
+    action.problems.forEach(x => p[x.id] = x)
+    return p 
+    //return state.concat(action.problems)
   default:
     return state
   }
@@ -117,6 +120,17 @@ function clashResults (state = [], action) {
   }
 }
 
+function clashes (state = {}, action) {
+  switch (action.type) {
+  case "ADD_CLASH":
+    let m = {}
+    m[action.clash.id] = action.clash
+    return Object.assign({}, state, m)
+  default:
+    return state
+  }
+}
+
 
 const rootReducer = combineReducers({
   users,
@@ -128,7 +142,8 @@ const rootReducer = combineReducers({
   problems,
   token,
   results,
-  clashResults
+  clashResults,
+  clashes
 })
 
 export default rootReducer

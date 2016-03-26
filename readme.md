@@ -1,4 +1,8 @@
 
+post /api/rooms -d {name}
+
+put /api/accounts -H auth:token -d {username}
+
 post /api/account {email, password} -> token
 post /api/login {email, password} -> token
 

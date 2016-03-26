@@ -17,28 +17,34 @@ let baseurl = `http://${host}/api`
 let origin = location.origin.replace(/^http/, "ws")
 let sock = null
 
+let seen = {}
+
 export function dial (dispatch) {
   sock = new WebSocket(origin + "/api/ws")
 
   sock.onmessage = function (e) {
     let d = JSON.parse(e.data)
+    handleEvent(d, dispatch)
+  }
+}
 
-    switch (d.verb) {
-    case "JOINED_LOBBY":
-      dispatch(addEvents([d]))
-      break;
-    case "STARTED_CLASH":
-      dispatch(getClash(d.noun))
-      break;
-    case "ran":
-      dispatch(getResult(d.subject))
-      break;
-    case "POSTED_RESULT":
-      dispatch(getResult(d.noun))
-      break;
-      console.log("someone posted a result")
-    default:
-    }
+function handleEvent (d, dispatch) {
+  switch (d.verb) {
+  case "JOINED_LOBBY":
+    dispatch(getUser(d.noun))
+    dispatch(addEvents([d]))
+    break;
+  case "STARTED_CLASH":
+    dispatch(getClash(d.noun))
+    break;
+  case "ran":
+    dispatch(getResult(d.subject))
+    break;
+  case "POSTED_RESULT":
+    dispatch(getClashResult(d.noun))
+    break;
+    console.log("someone posted a result")
+  default:
   }
 }
 
@@ -119,7 +125,6 @@ function waitForResult (id) {
 }
 
 function addResult (result) {
-  console.log("???", result)
   return {
     type: ADD_RESULT,
     result
@@ -135,6 +140,12 @@ function setUser (user) {
 
 export function getUser (id) {
   return function (dispatch, getState) {
+    if (seen[id]) {
+      return
+    } else {
+      seen[id] = true
+    }
+
     if (getState().users[id]) {
       return
     }
@@ -145,7 +156,7 @@ export function getUser (id) {
     .then(parse)
     .then(x => {
       let m = {}
-      m[id] = x
+      m[id] = x.username || "user"
       dispatch(setUser(m))
     })
     .catch(error)    
@@ -161,6 +172,20 @@ export function postResult (clash, code) {
       headers: {Authorization: token}
     })
 //    .then(x => dispatch(showResults(clash)))
+    .catch(error)
+  }
+}
+
+function getClashResult (id) {
+  return function (dispatch, getState) {
+    return request({
+      method: "GET",
+      url: `/api/code/${id}`
+    })
+    .then(parse)
+    .then(x => {
+      dispatch(addClashResult(x))
+    })
     .catch(error)
   }
 }
@@ -195,8 +220,8 @@ export function joinRoom(room) {
       headers: {Authorization:token}
     })
     .then(parse)
-    .then(x => {
-      dispatch(addEvents(x))
+    .then(xs => {
+      xs.map(x => handleEvent(x, dispatch))
       dispatch(joinRoomSuccess(room))
     })
     .catch(error)

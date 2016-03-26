@@ -703,14 +703,18 @@ func (s *ClashStore) Get(clashid string) *Clash {
 
 	if err != nil {
 		fmt.Println(err.Error())
+		return nil
 	}
 
-	d := res.Item["json"]
-	b := []byte(*d.S)
-
 	clash := &Clash{}
-	json.Unmarshal(b, clash)
+	d := res.Item["json"]
 
+	if d == nil {
+		return clash
+	}
+
+	b := []byte(*d.S)
+	json.Unmarshal(b, clash)
 	return clash
 }
 

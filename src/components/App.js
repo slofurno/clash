@@ -3,6 +3,7 @@ import { connect } from 'react-redux'
 import Clash from './Clash'
 import RoomList from './RoomList'
 import Lobby from './Lobby'
+import ClashResults from './ClashResults'
 
 import {
   setInput,
@@ -38,6 +39,7 @@ class App extends Component {
       rooms,
       currentRoom,
       events,
+      users,
       results,
       clashResults,
       setInput,
@@ -49,13 +51,12 @@ class App extends Component {
     } = this.props
 
     let visibleResults = clashResults.filter(x => x.subject === currentClash.id)
-
-    console.log(visibleResults)
+    let visibleClashResults = clashResults.filter(x => x.clash === currentClash.id)
 
     return (
       <div>
         <div style = {{display: "inline-block"}}>
-          <Lobby room = {currentRoom} events = {events}/>
+          <Lobby room = {currentRoom} events = {events} users = {users} />
           <Clash 
             setInput = {setInput} 
             clash = {currentClash}
@@ -63,6 +64,10 @@ class App extends Component {
             postResult = {postResult}
             results = {results}
             visibleResults = {visibleResults}
+            users = {users}
+          />
+          <ClashResults
+            results = {visibleClashResults}             
           />
         </div>
         <div style = {{
