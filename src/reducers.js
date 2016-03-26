@@ -39,6 +39,8 @@ const initialClash = {
 
 function currentClash (state = {}, action) {
   switch (action.type) {
+  case "SET_PROBLEM":
+    return Object.assign({}, state, {id: action.clash})
   case JOIN_CLASH:
     return Object.assign({}, state, {id: action.id})
   case SHOW_CLASH:
@@ -120,22 +122,28 @@ function clashResults (state = [], action) {
   }
 }
 
-function clashes (state = {}, action) {
+function clashes (state = [], action) {
   switch (action.type) {
   case "ADD_CLASH":
-    let m = {}
-    m[action.clash.id] = action.clash
-    return Object.assign({}, state, m)
+    return state.concat([action.clash])
   default:
     return state
   }
 }
 
 function slide (state = "", action) {
-  console.log(action)
   switch (action.type) {
   case "SET_SLIDE":
     return action.slide
+  default:
+    return state
+  }
+}
+
+function currentProblem (state = "", action) {
+  switch (action.type) {
+  case "SET_PROBLEM":
+    return action.problem
   default:
     return state
   }
@@ -154,7 +162,8 @@ const rootReducer = combineReducers({
   results,
   clashResults,
   clashes,
-  slide
+  slide,
+  currentProblem
 })
 
 export default rootReducer

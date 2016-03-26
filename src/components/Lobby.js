@@ -1,6 +1,6 @@
 import React, { Component, PropTypes } from 'react'
 
-const Lobby = ({room, events, users}) => {
+const Lobby = ({room, events, users, clashes, setProblem}) => {
   
   let xs = events.filter(x => x.subject === room.id).sort((a,b) => a.time - b.time)
   let here = {}
@@ -22,6 +22,10 @@ const Lobby = ({room, events, users}) => {
       <ul>
         { Object.keys(here).map((x, i) => <div className = "user" key = {i}>{users[x]}</div>) }
       </ul> 
+
+      <ul>
+        { clashes.map((x, i) => <li key = {i} onClick = {e => setProblem(x.problem, x.id)}> join </li>)}
+      </ul>
     </div>
   ) 
 }

@@ -10,7 +10,8 @@ import {
   joinRoom,
   postCode,
   postResult,
-  setSlide
+  setSlide,
+  setProblem
 } from '../actions'
 
 
@@ -30,7 +31,10 @@ const mapDispatchToProps = (dispatch) => {
     },
     setSlide: (slide) => {
       dispatch(setSlide(slide))
-    }
+    },
+    setProblem: (problem) => {
+      dispatch(setProblem(problem))
+    },
     /*onTodoClick: (id) => {
       dispatch(toggleTodo(id))
     }*/
@@ -45,6 +49,9 @@ class App extends Component {
       events,
       users,
       results,
+      clashes,
+      problems,
+      currentProblem,
       clashResults,
       slide,
       setInput,
@@ -52,17 +59,27 @@ class App extends Component {
       joinRoom,
       postCode,
       postResult,
-      setSlide
+      setSlide,
+      setProblem
 
     } = this.props
 
     let visibleResults = clashResults.filter(x => x.subject === currentClash.id)
     let visibleClashResults = clashResults.filter(x => x.clash === currentClash.id)
+    let visibleProblem = problems[currentProblem] || {}
 
     let visibleSlide = (function(){
       switch(slide) {
       case "LOBBY":
-        return (<Lobby room = {currentRoom} events = {events} users = {users} />)
+        return (
+            <Lobby 
+              room = {currentRoom} 
+              events = {events}
+              users = {users}
+              clashes = {clashes}
+              setProblem = {setProblem}
+            />
+        )
       case "CLASH":
         return (
           <Clash 
@@ -73,6 +90,7 @@ class App extends Component {
             results = {results}
             visibleResults = {visibleResults}
             users = {users}
+            visibleProblem = {visibleProblem}
           />
         )
       case "RESULTS":

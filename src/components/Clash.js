@@ -19,8 +19,8 @@ const Result = ({result, postResult}) => {
   )
 }
 
-const Clash = ({users, setInput, clash, postCode, results, postResult}) => {
-  let { text, input } = clash.problem || {}
+const Clash = ({users, setInput, clash, postCode, results, postResult, visibleProblem}) => {
+  let { text, input } = visibleProblem 
   let { value } = clash
   let onSubmit = (e) => postCode(clash.id, {code:value, runner:"js"})
 

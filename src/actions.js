@@ -247,6 +247,13 @@ export function getRooms() {
   }
 }
 
+function addClash (clash) {
+  return {
+    type: "ADD_CLASH",
+    clash
+  } 
+}
+
 function unsubscribe (topic) {
   sock.send(JSON.stringify({
     type: "UNSUB",
@@ -273,6 +280,14 @@ function getProblem (problem) {
   }
 }
 
+//FIXME: have to set both clash + problemid
+export function setProblem (problem, clash) {
+  return {
+    type: "SET_PROBLEM",
+    problem,
+    clash
+  }
+}
 
 export function getCode (id) {
   return function (dispatch, getState) {
@@ -300,14 +315,15 @@ export function postCode (clash, code) {
 export function getClash (id) {
   return function (dispatch) {
     subscribe(id)
-    dispatch(joinClash(id))
+    //dispatch(joinClash(id))
     return request({
       method: "GET",
       url: `${baseurl}/clash/${id}`
     })
     .then(parse)
     .then(x => { 
-      dispatch(getProblem(x.problem))
+      dispatch(addClash(x))
+      //dispatch(getProblem(x.problem))
     })
   }
 }
