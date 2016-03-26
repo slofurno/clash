@@ -66,6 +66,7 @@ type Account struct {
 	Id       string `json:"id"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Meta     string `json:"meta"`
 }
 
 func NewAccount(email, password string) *Account {
@@ -208,11 +209,21 @@ type Event struct {
 	Time    int64  `json:"time"`
 }
 
+type Event2 struct {
+	Topic string      `json:"topic"`
+	Load  interface{} `json:"load"`
+	Meta  string      `json:"meta"`
+}
+
 func (s *AccountStore) Insert(account *Account) {
+
+	b, _ := json.Marshal(account.Meta)
+
 	item := map[string]*dynamodb.AttributeValue{
 		"id":       S(account.Id),
 		"email":    S(account.Email),
 		"password": S(account.Password),
+		"meta":     S(string(b)),
 	}
 
 	s.db.PutItem(&dynamodb.PutItemInput{
@@ -221,7 +232,51 @@ func (s *AccountStore) Insert(account *Account) {
 	})
 }
 
-func (s *AccountStore) Get(loginEmail string) []*Account {
+func (s *AccountStore) PutMeta(id, meta string) {
+	update := map[string]*dynamodb.AttributeValue{
+		":meta": S(meta),
+	}
+	key := map[string]*dynamodb.AttributeValue{
+		"id": S(id),
+	}
+	out, err := s.db.UpdateItem(&dynamodb.UpdateItemInput{
+		TableName:                 aws.String(ACCOUNTS_TABLE),
+		Key:                       key,
+		UpdateExpression:          aws.String("SET meta = :meta"),
+		ExpressionAttributeValues: update,
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	fmt.Println(out.String())
+}
+
+func (s *AccountStore) GetMeta(id string) string {
+	key := map[string]*dynamodb.AttributeValue{
+		"id": S(id),
+	}
+
+	out, err := s.db.GetItem(&dynamodb.GetItemInput{
+		TableName: aws.String(ACCOUNTS_TABLE),
+		Key:       key,
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return ""
+	}
+	meta := out.Item["meta"]
+
+	if meta == nil {
+		return ""
+	}
+	return *meta.S
+}
+
+func (s *AccountStore) Query(loginEmail string) []*Account {
 
 	item := map[string]*dynamodb.AttributeValue{
 		":email": S(loginEmail),

@@ -306,6 +306,8 @@ func main() {
 
 	r.HandleFunc("/api/accounts", createAccount).Methods("POST")
 	r.HandleFunc("/api/accounts/login", createLogin).Methods("POST")
+	r.HandleFunc("/api/accounts/{account}", getMeta).Methods("GET")
+	r.HandleFunc("/api/accounts", putMeta).Methods("PUT")
 
 	http.Handle("/api/", r)
 	http.Handle("/", http.FileServer(http.Dir("public")))

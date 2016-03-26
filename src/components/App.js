@@ -7,7 +7,8 @@ import Lobby from './Lobby'
 import {
   setInput,
   joinRoom,
-  postCode
+  postCode,
+  postResult
 } from '../actions'
 
 
@@ -21,6 +22,9 @@ const mapDispatchToProps = (dispatch) => {
     },
     postCode: (clash, code) => {
       dispatch(postCode(clash, code))
+    },
+    postResult: (clash, code) => {
+      dispatch(postResult(clash, code))
     }
     /*onTodoClick: (id) => {
       dispatch(toggleTodo(id))
@@ -35,12 +39,18 @@ class App extends Component {
       currentRoom,
       events,
       results,
+      clashResults,
       setInput,
       currentClash,
       joinRoom,
-      postCode
+      postCode,
+      postResult
 
     } = this.props
+
+    let visibleResults = clashResults.filter(x => x.subject === currentClash.id)
+
+    console.log(visibleResults)
 
     return (
       <div>
@@ -50,7 +60,9 @@ class App extends Component {
             setInput = {setInput} 
             clash = {currentClash}
             postCode = {postCode}
+            postResult = {postResult}
             results = {results}
+            visibleResults = {visibleResults}
           />
         </div>
         <div style = {{

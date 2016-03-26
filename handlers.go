@@ -19,6 +19,37 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+type accountMeta struct {
+	Username string `json:"username"`
+}
+
+func putMeta(res http.ResponseWriter, req *http.Request) {
+	login, err := auth(req)
+
+	if err != nil {
+		res.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	meta := &accountMeta{}
+	err = json.NewDecoder(req.Body).Decode(meta)
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	b, _ := json.Marshal(meta)
+	store.Accounts.PutMeta(login.Account, string(b))
+}
+
+func getMeta(res http.ResponseWriter, req *http.Request) {
+	account := mux.Vars(req)["account"]
+	meta := store.Accounts.GetMeta(account)
+	res.Header().Set("Content-Type", "application/javascript")
+	res.Write([]byte(meta))
+}
+
 func createLogin(res http.ResponseWriter, req *http.Request) {
 	login := &loginRequest{}
 	err := json.NewDecoder(req.Body).Decode(login)
@@ -28,7 +59,7 @@ func createLogin(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	matches := store.Accounts.Get(login.Email)
+	matches := store.Accounts.Query(login.Email)
 	var account *datastore.Account
 
 	for _, match := range matches {
@@ -191,10 +222,14 @@ func postResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//clash := store.Clashes.Get(clashid)
+	login, err := auth(r)
+	if err != nil || login.Account != code.User {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	resultid := utils.Makeid()
 
-	//TODO: default code result is success
 	store.Results.Insert(&datastore.Result{
 		Id:     resultid,
 		Clash:  clashid,
@@ -202,6 +237,14 @@ func postResult(w http.ResponseWriter, r *http.Request) {
 		Time:   code.Time,
 		User:   code.User,
 		Code:   code.Id,
+	})
+
+	store.Events.Insert(&datastore.Event{
+		Id:      utils.Makeid(),
+		Time:    utils.Epoch_ms(),
+		Subject: clashid,
+		Noun:    code.Id,
+		Verb:    "POSTED_RESULT",
 	})
 
 	w.Write([]byte(resultid))

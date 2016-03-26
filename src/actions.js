@@ -8,6 +8,7 @@ export const ADD_PROBLEMS = 'ADD_PROBLEMS'
 export const SHOW_CLASH = 'SHOW_CLASH'
 export const JOIN_CLASH ='JOIN_CLASH'
 export const ADD_RESULT = 'ADD_RESULT'
+export const ADD_CLASH_RESULT = 'ADD_CLASH_RESULT'
 export const SET_TOKEN = 'SET_TOKEN'
 
 let host = location.host
@@ -21,7 +22,6 @@ export function dial (dispatch) {
   sock.onmessage = function (e) {
     let d = JSON.parse(e.data)
 
-      console.log(d)
     switch (d.verb) {
     case "JOINED_LOBBY":
       dispatch(addEvents([d]))
@@ -32,11 +32,21 @@ export function dial (dispatch) {
     case "ran":
       dispatch(getResult(d.subject))
       break;
+    case "POSTED_RESULT":
+      dispatch(getResult(d.noun))
+      break;
+      console.log("someone posted a result")
     default:
     }
   }
 }
 
+function addClashResult (result) {
+  return {
+    type: ADD_CLASH_RESULT,
+    result
+  }
+}
 
 export function setInput (e) {
   return {
@@ -115,8 +125,26 @@ function addResult (result) {
   }
 }
 
+export function postResult (clash, code) {
+  return function (dispatch, getState) {
+    let token = getState().token || ""
+    return request({
+      method: "POST",
+      url: `/api/clash/${clash}/code/${code}`,
+      headers: {Authorization: token}
+    })
+//    .then(x => dispatch(showResults(clash)))
+    .catch(error)
+  }
+}
+
 function getResult (id) {
-  return function (dispatch) {
+  return function (dispatch, getState) {
+    let matches = getState().results.filter(x => x.id === id)
+    if (matches.length > 0) {
+      console.log("already have this result")
+      return
+    }
     return request({
       method: "GET",
       url: `/api/code/${id}`
@@ -181,6 +209,13 @@ function getProblem (problem) {
   }
 }
 
+
+export function getCode (id) {
+  return function (dispatch, getState) {
+    let code = getState.code[id]
+  }
+}
+
 export function postCode (clash, code) {
   return function (dispatch, getState) {
     let token = getState().token || ""
@@ -200,6 +235,7 @@ export function postCode (clash, code) {
 
 export function getClash (id) {
   return function (dispatch) {
+    subscribe(id)
     dispatch(joinClash(id))
     return request({
       method: "GET",

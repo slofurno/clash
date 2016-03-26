@@ -8,7 +8,8 @@ import {
   SHOW_CLASH,
   JOIN_CLASH,
   SET_TOKEN,
-  ADD_RESULT
+  ADD_RESULT,
+  ADD_CLASH_RESULT
 } from './actions'
 
 function user (state = {}, action) {
@@ -104,6 +105,15 @@ function results (state = [], action) {
   }
 }
 
+function clashResults (state = [], action) {
+  switch (action.type) {
+  case ADD_CLASH_RESULT:
+    return state.concat([action.result])
+  default:
+    return state
+  }
+}
+
 
 const rootReducer = combineReducers({
   user,
@@ -114,7 +124,8 @@ const rootReducer = combineReducers({
   events,
   problems,
   token,
-  results
+  results,
+  clashResults
 })
 
 export default rootReducer

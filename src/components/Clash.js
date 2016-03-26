@@ -1,13 +1,15 @@
 import React, { Component, PropTypes } from 'react'
 
-const Result = ({result}) => {
+const Result = ({result, postResult}) => {
 
   const {code, output, diff, status} = result
 
   let color = status === 0 ? "green" : "red"
+  let onClick = e => postResult(result.clash, result.id)
 
   return (
     <div>
+      <input type="button" value="submit" onClick={onClick}/>
       <pre>{code}</pre>
       <pre>{output}</pre>
       <pre style = {{
@@ -17,9 +19,7 @@ const Result = ({result}) => {
   )
 }
 
-const Clash = ({setInput, clash, postCode, results}) => {
-  //TODO: fix this
-  console.log(clash)
+const Clash = ({setInput, clash, postCode, results, postResult}) => {
   let { text, input } = clash.problem || {}
   let { value } = clash
   let onSubmit = (e) => postCode(clash.id, {code:value, runner:"js"})
@@ -30,6 +30,8 @@ const Clash = ({setInput, clash, postCode, results}) => {
     padding: "5px",
     verticalAlign: "top"
   }
+
+  let currentResults = results.filter(x => x.clash === clash.id)
 
   return (
 		<div style = {{
@@ -49,7 +51,10 @@ const Clash = ({setInput, clash, postCode, results}) => {
         <input type="button" value="submit" onClick = {onSubmit} />
       </div>
       <div style = {style}>
-        { results.slice().reverse().map((x, i) => <Result key = {i} result = {x}/>) }
+        { currentResults.slice().reverse().map((x, i) => 
+            <Result key = {i} result = {x} postResult={postResult}/>
+          )
+        }
       </div>
 
 		</div>
