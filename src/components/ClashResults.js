@@ -1,9 +1,10 @@
 import React, { Component, PropTypes } from 'react'
 
-const ClashResults = ({results}) => {
+      //onclick should actually get the code + show it..
+const ClashResults = ({results, users, setCode}) => {
   return (
     <div>
-      {results.map(x => <pre key={x.id}>{x.code}</pre>)}
+      {results.map((x, i) => <pre key={i} onClick={e => setCode(x.code)}>{users[x.user]}{"  "}{x.time}</pre>)}
     </div>
   )
 }

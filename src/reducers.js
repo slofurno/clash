@@ -115,8 +115,10 @@ function results (state = [], action) {
 
 function clashResults (state = [], action) {
   switch (action.type) {
+  case "SET_CLASH_RESULT":
+    return action.result
   case ADD_CLASH_RESULT:
-    return state.concat([action.result])
+    return state.concat(action.result)
   default:
     return state
   }
@@ -151,6 +153,26 @@ function currentProblem (state = "", action) {
   }
 }
 
+function codes (state = {}, action) {
+  switch (action.type) {
+  case "ADD_CODE":
+    let c = {}
+    c[action.code.id] = action.code
+    return Object.assign({}, state, c)
+  default:
+    return state
+  }
+}
+
+function currentCode (state = "", action) {
+  switch (action.type) {
+  case "SET_CODE":
+    return action.code
+  default:
+    return state
+  }
+}
+
 
 const rootReducer = combineReducers({
   users,
@@ -165,7 +187,9 @@ const rootReducer = combineReducers({
   clashResults,
   clashes,
   slide,
-  currentProblem
+  currentProblem,
+  currentCode,
+  codes
 })
 
 export default rootReducer

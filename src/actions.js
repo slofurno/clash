@@ -55,6 +55,13 @@ export function setSlide (slide) {
   }
 }
 
+function addClashResults (result) {
+  return {
+    type: "SET_CLASH_RESULT",
+    result
+  }
+}
+
 function addClashResult (result) {
   return {
     type: ADD_CLASH_RESULT,
@@ -183,19 +190,6 @@ export function postResult (clash, code) {
   }
 }
 
-function getClashResult (id) {
-  return function (dispatch, getState) {
-    return request({
-      method: "GET",
-      url: `/api/code/${id}`
-    })
-    .then(parse)
-    .then(x => {
-      dispatch(addClashResult(x))
-    })
-    .catch(error)
-  }
-}
 
 function getResult (id) {
   return function (dispatch, getState) {
@@ -283,7 +277,8 @@ function getProblem (problem) {
 }
 
 //FIXME: have to set both clash + problemid
-export function setProblem (problem, clash) {
+//
+function setProblem2 (problem, clash) {
   return {
     type: "SET_PROBLEM",
     problem,
@@ -291,9 +286,70 @@ export function setProblem (problem, clash) {
   }
 }
 
+function addCode (code) {
+  return {
+    type: "ADD_CODE",
+    code
+  } 
+}
+
+export function setCode (code) {
+  return {
+    type: "SET_CODE",
+    code
+  } 
+}
+
+//TODO: make this set the code + the clashResult
+function getClashResult (id) {
+  return function (dispatch, getState) {
+    return request({
+      method: "GET",
+      url: `/api/code/${id}`
+    })
+    .then(parse)
+    .then(x => {
+      dispatch(addCode(x))
+      dispatch(addClashResult([
+        {
+          code: x.id,
+          user: x.user,
+          time: x.time,
+          clash: x.clash,
+          status: x.status
+        }
+      ]))
+    })
+    .catch(error)
+  }
+}
+
+export function setProblem (problem, clash) {
+  return function (dispatch, getState) {
+    dispatch(setProblem2(problem,clash))
+    return request({
+      method: "GET",
+      url: `/api/clash/${clash}/code`
+    })
+    .then(parse)
+    .then(x => dispatch(addClashResults(x)))
+    .catch(error)
+  }
+}
+
 export function getCode (id) {
   return function (dispatch, getState) {
-    let code = getState.code[id]
+    dispatch(setCode(id))
+    if (getState().codes[id]) {
+      return
+    }
+    return request({
+      method: "GET",
+      url: `/api/code/${id}`
+    })
+    .then(parse)
+    .then(x => dispatch(addCode(x)))
+    .catch(error)
   }
 }
 

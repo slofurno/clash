@@ -11,7 +11,8 @@ import {
   postCode,
   postResult,
   setSlide,
-  setProblem
+  setProblem,
+  getCode
 } from '../actions'
 
 
@@ -35,6 +36,9 @@ const mapDispatchToProps = (dispatch) => {
     setProblem: (problem, clash) => {
       dispatch(setProblem(problem, clash))
     },
+    getCode: (code) => {
+      dispatch(getCode(code))
+    }
     /*onTodoClick: (id) => {
       dispatch(toggleTodo(id))
     }*/
@@ -51,22 +55,29 @@ class App extends Component {
       results,
       clashes,
       problems,
+      codes,
       currentProblem,
       clashResults,
       slide,
       setInput,
       currentClash,
+      currentCode,
       joinRoom,
       postCode,
       postResult,
       setSlide,
-      setProblem
-
+      setProblem,
+      getCode
     } = this.props
 
     let visibleResults = clashResults.filter(x => x.subject === currentClash.id)
     let visibleClashResults = clashResults.filter(x => x.clash === currentClash.id)
     let visibleProblem = problems[currentProblem] || {}
+
+    let selectedCode = codes[currentCode] || {}
+    let visibleCode = selectedCode.code
+    console.log(visibleCode, selectedCode)
+
 
     let visibleSlide = (function(){
       switch(slide) {
@@ -97,6 +108,8 @@ class App extends Component {
         return (
           <ClashResults
             results = {visibleClashResults}             
+            users = {users}
+            setCode = {getCode}
           />
         )
       default:
@@ -130,6 +143,7 @@ class App extends Component {
         }}>
           <RoomList rooms = {rooms} joinRoom = {joinRoom}/>
         </div>
+        <pre>{visibleCode}</pre>
       </div>
     )
   }
